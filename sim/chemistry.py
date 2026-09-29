@@ -2,8 +2,9 @@
 
 The pH comes from a lookup table that CHE exports from Aspen Plus
 (see aspen_tables/README.md for the file format). Until those tables arrive, a
-placeholder table generated from the report's charge-balance equations is used and
-every output is labelled PLACEHOLDER.
+placeholder table for the tank liquid (5.000 L distilled water + 0.420 g NaHCO3, closed
+carbonate model, see make_placeholder_table.py) is used and every output is labelled
+PLACEHOLDER. excess_mmol = 0 is that liquid as prepared, about pH 8.30, not pH 7.
 
 Sign convention in this module follows the team's I2 contract and the Aspen tables:
     excess_mmol  >0 = extra strong base, <0 = extra strong acid, for a 5.000 L tank.
@@ -16,6 +17,7 @@ import os
 import warnings
 
 import numpy as np
+from scipy.optimize import brentq
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TABLE_DIR = os.path.join(HERE, "aspen_tables")
@@ -58,20 +60,25 @@ def _read_csv(path: str) -> list[tuple[float, float, float]]:
     return rows
 
 
-def _load() -> dict:
-    """Build {temp_c: (excess_mmol asc, ph)} from every CSV in aspen_tables/."""
+def _load(paths: list[str] | None = None) -> dict:
+    """Build {temp_c: (excess_mmol asc, ph)} from every CSV in aspen_tables/, or from
+    exactly the given files (the known-answer tests use this for the pure-water table)."""
     global _CACHE
-    if _CACHE is not None:
+    if _CACHE is not None and paths is None:
         return _CACHE
-    files = sorted(p for p in glob.glob(os.path.join(TABLE_DIR, "*.csv"))
-                   if not os.path.basename(p).startswith("_"))
-    if not files:
-        raise FileNotFoundError(
-            f"No pH table in {TABLE_DIR}. Run `python -m sim.make_placeholder_table` "
-            f"or drop the Aspen CSVs in (see aspen_tables/README.md).")
-    real = [p for p in files if "placeholder" not in os.path.basename(p).lower()]
-    source = "ASPEN" if real else "PLACEHOLDER"
-    use = real or files
+    if paths is None:
+        files = sorted(p for p in glob.glob(os.path.join(TABLE_DIR, "*.csv"))
+                       if not os.path.basename(p).startswith("_"))
+        if not files:
+            raise FileNotFoundError(
+                f"No pH table in {TABLE_DIR}. Run `python -m sim.make_placeholder_table` "
+                f"or drop the Aspen CSVs in (see aspen_tables/README.md).")
+        real = [p for p in files if "placeholder" not in os.path.basename(p).lower()]
+        use = real or files
+    else:
+        real = [p for p in paths if "placeholder" not in os.path.basename(p).lower()]
+        use = list(paths)
+    source = "ASPEN" if real and len(real) == len(use) else "PLACEHOLDER"
     if source == "PLACEHOLDER":
         warnings.warn("sim.chemistry is using the PLACEHOLDER pH table, not Aspen output. "
                       "Every result is labelled chem_source=PLACEHOLDER.", stacklevel=3)
@@ -99,7 +106,9 @@ def _load() -> dict:
         # 0.01 mmol and the table's grid is 0.002 mmol. Interpolate the net strong-acid
         # concentration c = [H+] - [OH-] instead: c is exactly linear in excess_mmol for a
         # strong acid/base system, so the interpolation error collapses to the table's own
-        # accuracy. pH is recovered from c by the same charge balance.
+        # accuracy. pH is recovered from c by the same charge balance. With a buffered
+        # liquid c is no longer linear in excess, so there the accuracy rests on the
+        # table's own spacing across the buffer and equivalence regions.
         h = 10.0 ** (-p)
         c = h - _kw(t) / h
         tables[t] = (e, p, c)
@@ -109,11 +118,12 @@ def _load() -> dict:
     return _CACHE
 
 
-def reload_tables() -> dict:
-    """Forget the cached tables (call after dropping new Aspen CSVs in)."""
+def reload_tables(paths: list[str] | None = None) -> dict:
+    """Forget the cached tables (call after dropping new Aspen CSVs in). With paths,
+    load exactly those files instead of the folder; reload_tables() goes back."""
     global _CACHE
     _CACHE = None
-    return _load()
+    return _load(paths)
 
 
 def table_provenance() -> str:
@@ -126,6 +136,18 @@ def table_files() -> list[str]:
 
 
 # ------------------------------------------------------------------- the model
+def _bracket(temps: np.ndarray, temp_c: float) -> tuple[float, float, float]:
+    """The two table temperatures around temp_c and the blend weight of the upper one.
+    Outside the table's range the nearest end is used on its own (w = 0)."""
+    if len(temps) == 1 or temp_c <= temps[0]:
+        return temps[0], temps[0], 0.0
+    if temp_c >= temps[-1]:
+        return temps[-1], temps[-1], 0.0
+    i = int(np.searchsorted(temps, temp_c))
+    t_lo, t_hi = temps[i - 1], temps[i]
+    return t_lo, t_hi, (temp_c - t_lo) / (t_hi - t_lo)
+
+
 def ph_from_excess(excess_mmol: float, temp_c: float = 25.0,
                    volume_L: float = BASIS_L) -> float:
     """pH of the tank.
@@ -136,17 +158,7 @@ def ph_from_excess(excess_mmol: float, temp_c: float = 25.0,
     """
     d = _load()
     x = float(excess_mmol) * BASIS_L / float(volume_L)
-    temps = d["temps"]
-    if len(temps) == 1 or temp_c <= temps[0]:
-        t_lo = t_hi = temps[0] if len(temps) == 1 or temp_c <= temps[0] else temps[-1]
-        w = 0.0
-    elif temp_c >= temps[-1]:
-        t_lo = t_hi = temps[-1]
-        w = 0.0
-    else:
-        i = int(np.searchsorted(temps, temp_c))
-        t_lo, t_hi = temps[i - 1], temps[i]
-        w = (temp_c - t_lo) / (t_hi - t_lo)
+    t_lo, t_hi, w = _bracket(d["temps"], temp_c)
     e_lo, _p_lo, c_lo = d["tables"][t_lo]
     lo = _ph_of_c(float(np.interp(x, e_lo, c_lo)), t_lo)
     if w == 0.0:
@@ -158,16 +170,32 @@ def ph_from_excess(excess_mmol: float, temp_c: float = 25.0,
 
 def excess_from_ph(ph_value: float, temp_c: float = 25.0,
                    volume_L: float = BASIS_L) -> float:
-    """Inverse lookup: the excess (base-positive mmol) that gives this pH."""
+    """Inverse lookup: the excess (base-positive mmol) that gives this pH.
+
+    The exact inverse of ph_from_excess() at the same temperature and fill, so the
+    optimiser's reading of a pH and the simulated tank agree."""
     d = _load()
-    temps = d["temps"]
-    t = float(temps[int(np.argmin(np.abs(temps - temp_c)))])
-    e, _p, c = d["tables"][t]
-    # invert in c-space for the same reason the forward lookup uses it: c is linear in
-    # excess, pH is not. c descends as excess rises, so flip for np.interp.
-    h = 10.0 ** (-float(ph_value))
-    c_target = h - _kw(t) / h
-    return float(np.interp(c_target, c[::-1], e[::-1])) * float(volume_L) / BASIS_L
+    t_lo, t_hi, w = _bracket(d["temps"], temp_c)
+    e, _p, c = d["tables"][t_lo]
+    if w == 0.0:
+        # invert in c-space for the same reason the forward lookup uses it: c is linear
+        # in excess, pH is not. c descends as excess rises, so flip for np.interp.
+        h = 10.0 ** (-float(ph_value))
+        c_target = h - _kw(t_lo) / h
+        x = float(np.interp(c_target, c[::-1], e[::-1]))
+    else:
+        # between two table temperatures the forward lookup blends their pH, so invert
+        # that blend numerically; it is monotone in excess, so the root is unique
+        lo_x = max(e[0], d["tables"][t_hi][0][0])
+        hi_x = min(e[-1], d["tables"][t_hi][0][-1])
+        f = lambda xx: ph_from_excess(xx, temp_c) - float(ph_value)  # noqa: E731
+        if f(lo_x) >= 0.0:
+            x = lo_x
+        elif f(hi_x) <= 0.0:
+            x = hi_x
+        else:
+            x = float(brentq(f, lo_x, hi_x, xtol=1e-10))
+    return x * float(volume_L) / BASIS_L
 
 
 # ------------------------------------------------- boundary with the optimiser

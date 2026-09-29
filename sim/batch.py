@@ -32,6 +32,7 @@ import numpy as np
 from . import model as Mo
 from . import scenarios as SC
 from . import sim2
+from .chemistry import table_files
 from .engine import use_table_chemistry
 from .model import P
 
@@ -151,9 +152,14 @@ def run(events: int = 600, seed: int = 261, out: str = "ISE-AT-01_batch.csv",
         no_excursion=n - int(sum(r["excursion"] for r in rows)),
         pct_no_excursion=100.0 * (n - sum(r["excursion"] for r in rows)) / n,
         escalations=int(sum(r["outcome"] == "ESCALATE" for r in rows)),
-        worst_far_side=float(max(rows, key=lambda r: abs(r["far_side_peak_ph"] - 7.0))["far_side_peak_ph"]),
     )
-    s["worst_event"] = int(max(rows, key=lambda r: abs(r["far_side_peak_ph"] - 7.0))["event_id"])
+    # the event that came closest to its far-side limit, as in redosing/qc/far_side.py
+    # (distance from pH 7 would favour acid upsets now that the liquid rests at 8.30)
+    worst = min(rows, key=lambda r: (FAR_HI - r["far_side_peak_ph"]) if r["upset_dir"] == "ACID"
+                else (r["far_side_peak_ph"] - FAR_LO))
+    s["worst_far_side"] = float(worst["far_side_peak_ph"])
+    s["worst_event"] = int(worst["event_id"])
+    s["chem_files"] = ", ".join(table_files())
     if not quiet:
         _report(s)
     return s
@@ -161,7 +167,7 @@ def run(events: int = 600, seed: int = 261, out: str = "ISE-AT-01_batch.csv",
 
 def _report(s: dict) -> None:
     print(f"\nChemShield batch: {s['events']} events, seed {s['seed']}, "
-          f"chemistry = {s['chem_source']}  ({s['wall_s']} s)")
+          f"chemistry = {s['chem_source']} ({s['chem_files']})  ({s['wall_s']} s)")
     print(f"  wrote {s['out']}")
     if s["traces"]:
         print(f"  wrote {s['traces']}")
@@ -177,8 +183,8 @@ def _report(s: dict) -> None:
           f"(event {s['worst_event']})")
     print(f"  escalations to the operator  {s['escalations']}")
     if s["chem_source"] == "PLACEHOLDER":
-        print("\n  chemistry = PLACEHOLDER: these numbers are from the report's charge-balance\n"
-              "  equations, not from Aspen. Re-run once CHE delivers sim/aspen_tables/.")
+        print("\n  chemistry = PLACEHOLDER: these numbers are from a closed carbonate model of\n"
+              "  the tank liquid, not from Aspen. Re-run once CHE delivers sim/aspen_tables/.")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -16,7 +16,7 @@ Accepts these commands as one JSON object per UDP datagram (or one per line on s
     {"cmd": "dose",   "channel_id": "BASE_BULK", "dose_ml": 11.8}   an approved dose
     {"cmd": "upset",  "scenario": "acid_upset_max"}                 inject an unsafe event
     {"cmd": "upset",  "ml": 60, "acid": true}                       inject a custom event
-    {"cmd": "reset"}                                                back to 5.000 L at pH 7
+    {"cmd": "reset"}                                                back to 5.000 L of fresh liquid
     {"cmd": "fault",  "kind": "pump_under", "value": 0.7}           inject a fault
     {"cmd": "state"}                                                reply with I2 now
 
@@ -54,12 +54,12 @@ class Tank:
         self.rng = np.random.default_rng(seed)
         self.volume_L = float(volume_L)
         self.temp_c = float(temp_c)
-        self.excess_mmol = 0.0
+        self.excess_mmol = 0.0           # the liquid as prepared (NaHCO3: pH ~8.30, not 7)
         self.state = "IDLE"
         self.event_mmol_used = 0.0
         self.event_ml_used = 0.0
         self.event_t0: float | None = None
-        self.ph_read = 7.0
+        self.ph_read = self.ph_true      # the probe starts settled on the liquid
         self.tau_s = 4.0                 # probe + mixing lag; measure it and replace
         self.noise_pH = 0.02             # per-sample probe noise; measure and replace
         self.pump_bias = 0.0             # relative delivery error, set by a fault

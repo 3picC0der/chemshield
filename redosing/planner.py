@@ -21,6 +21,7 @@ from __future__ import annotations
 import time
 
 from sim import rdo
+from sim.engine import ensure_table_chemistry
 from sim.model import C, P
 
 # I4 channel names <-> the optimiser's pump index (sim/model.py PUMPS order)
@@ -66,6 +67,9 @@ def plan_block(state: dict, par: dict = P) -> dict:
     if age > MAX_SAMPLE_AGE_S:
         return _escalate("STALE", detail=f"sample_age_s={age:.1f}")
 
+    # plan on the tank's pH table, not the pure-water formula, even when the gateway
+    # calls this directly without sim.batch or sim.live having set the chemistry up
+    ensure_table_chemistry()
     ph_m = float(state["ph"])
     v_hat = float(state.get("volume_L", par["V0"]))
     temp_c = float(state.get("temp_c", par["T_C"]))
@@ -139,18 +143,19 @@ def plan_next_dose(state: dict, par: dict = P) -> dict:
 
 if __name__ == "__main__":
     import json
+    from sim.chemistry import ph_from_excess
     from sim.engine import use_table_chemistry
 
     print("chemistry:", use_table_chemistry())
     demo = [
         ("acid tank, fresh event",
-         {"t": 0.0, "ph": 2.222, "temp_c": 25.0, "level_ok": True,
+         {"t": 0.0, "ph": round(ph_from_excess(-30.0), 3), "temp_c": 25.0, "level_ok": True,
           "excess_mmol": -30.0, "state": "RECOVERY", "event_mmol_used": 0.0, "source": "SIM"}),
         ("nearly in band",
-         {"t": 0.0, "ph": 6.20, "temp_c": 25.0, "level_ok": True,
-          "excess_mmol": -0.003, "state": "RECOVERY", "event_mmol_used": 24.0, "source": "SIM"}),
+         {"t": 0.0, "ph": round(ph_from_excess(-2.9), 3), "temp_c": 25.0, "level_ok": True,
+          "excess_mmol": -2.9, "state": "RECOVERY", "event_mmol_used": 24.0, "source": "SIM"}),
         ("budget nearly spent, big upset left",
-         {"t": 0.0, "ph": 2.10, "temp_c": 25.0, "level_ok": True,
+         {"t": 0.0, "ph": round(ph_from_excess(-40.0), 3), "temp_c": 25.0, "level_ok": True,
           "excess_mmol": -40.0, "state": "RECOVERY", "event_mmol_used": 49.5, "source": "SIM"}),
         ("stale reading",
          {"t": 0.0, "ph": 3.0, "sample_age_s": 45.0, "excess_mmol": -20.0,

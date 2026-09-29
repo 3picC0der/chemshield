@@ -1,0 +1,4 @@
+test_case,attempt,expected,decision,reason_code,forwarded_to_actuator,pass_fail
+authorized_gateway_path,HMI/MILP -> Gateway -> Actuator,ACCEPT and forward,ACCEPT,ACCEPTED,True,PASS
+direct_bypass_attempt,Operator laptop -> Actuator without gateway,REJECT/BLOCK,REJECT,BYPASS_BLOCKED,False,PASS
+direct_attempt_during_safe_hold,Direct actuator write while ChemShield is SAFE_HOLD,REJECT/BLOCK,REJECT,BYPASS_BLOCKED,False,PASS

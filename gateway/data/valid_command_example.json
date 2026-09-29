@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "session_id": "S-261-KHALID-PPR",
+  "command_id": "CMD-VALID-0001",
+  "event_id": "EVT-NOM-0001",
+  "timestamp_utc": "2026-09-29T09:50:00Z",
+  "nonce": "N-VALID-0001",
+  "sequence_number": 1,
+  "user_role": "operator",
+  "action": "RECOVERY_DOSE",
+  "reagent": "base",
+  "volume_ml": 12.0,
+  "flow_ml_min": 300.0,
+  "mixing_time_s": 15.0,
+  "recovery_mmol_after_command": 12.0,
+  "recovery_plan_hash": "sha256:demo_recovery_plan_v1",
+  "client_cert_fingerprint": "CERT-KHALID-DEMO",
+  "hmac_sha256": "calculated_at_runtime_by_auth.py"
+}
