@@ -2,8 +2,9 @@
 
 The pH comes from a lookup table that CHE exports from Aspen Plus
 (see aspen_tables/README.md for the file format). Until those tables arrive, a
-placeholder table generated from the report's charge-balance equations is used and
-every output is labelled PLACEHOLDER.
+placeholder table for the tank liquid (5.000 L distilled water + 0.420 g NaHCO3, closed
+carbonate model, see make_placeholder_table.py) is used and every output is labelled
+PLACEHOLDER. excess_mmol = 0 is that liquid as prepared, about pH 8.30, not pH 7.
 
 Sign convention in this module follows the team's I2 contract and the Aspen tables:
     excess_mmol  >0 = extra strong base, <0 = extra strong acid, for a 5.000 L tank.
@@ -59,20 +60,25 @@ def _read_csv(path: str) -> list[tuple[float, float, float]]:
     return rows
 
 
-def _load() -> dict:
-    """Build {temp_c: (excess_mmol asc, ph)} from every CSV in aspen_tables/."""
+def _load(paths: list[str] | None = None) -> dict:
+    """Build {temp_c: (excess_mmol asc, ph)} from every CSV in aspen_tables/, or from
+    exactly the given files (the known-answer tests use this for the pure-water table)."""
     global _CACHE
-    if _CACHE is not None:
+    if _CACHE is not None and paths is None:
         return _CACHE
-    files = sorted(p for p in glob.glob(os.path.join(TABLE_DIR, "*.csv"))
-                   if not os.path.basename(p).startswith("_"))
-    if not files:
-        raise FileNotFoundError(
-            f"No pH table in {TABLE_DIR}. Run `python -m sim.make_placeholder_table` "
-            f"or drop the Aspen CSVs in (see aspen_tables/README.md).")
-    real = [p for p in files if "placeholder" not in os.path.basename(p).lower()]
-    source = "ASPEN" if real else "PLACEHOLDER"
-    use = real or files
+    if paths is None:
+        files = sorted(p for p in glob.glob(os.path.join(TABLE_DIR, "*.csv"))
+                       if not os.path.basename(p).startswith("_"))
+        if not files:
+            raise FileNotFoundError(
+                f"No pH table in {TABLE_DIR}. Run `python -m sim.make_placeholder_table` "
+                f"or drop the Aspen CSVs in (see aspen_tables/README.md).")
+        real = [p for p in files if "placeholder" not in os.path.basename(p).lower()]
+        use = real or files
+    else:
+        real = [p for p in paths if "placeholder" not in os.path.basename(p).lower()]
+        use = list(paths)
+    source = "ASPEN" if real and len(real) == len(use) else "PLACEHOLDER"
     if source == "PLACEHOLDER":
         warnings.warn("sim.chemistry is using the PLACEHOLDER pH table, not Aspen output. "
                       "Every result is labelled chem_source=PLACEHOLDER.", stacklevel=3)
@@ -100,7 +106,9 @@ def _load() -> dict:
         # 0.01 mmol and the table's grid is 0.002 mmol. Interpolate the net strong-acid
         # concentration c = [H+] - [OH-] instead: c is exactly linear in excess_mmol for a
         # strong acid/base system, so the interpolation error collapses to the table's own
-        # accuracy. pH is recovered from c by the same charge balance.
+        # accuracy. pH is recovered from c by the same charge balance. With a buffered
+        # liquid c is no longer linear in excess, so there the accuracy rests on the
+        # table's own spacing across the buffer and equivalence regions.
         h = 10.0 ** (-p)
         c = h - _kw(t) / h
         tables[t] = (e, p, c)
@@ -110,11 +118,12 @@ def _load() -> dict:
     return _CACHE
 
 
-def reload_tables() -> dict:
-    """Forget the cached tables (call after dropping new Aspen CSVs in)."""
+def reload_tables(paths: list[str] | None = None) -> dict:
+    """Forget the cached tables (call after dropping new Aspen CSVs in). With paths,
+    load exactly those files instead of the folder; reload_tables() goes back."""
     global _CACHE
     _CACHE = None
-    return _load()
+    return _load(paths)
 
 
 def table_provenance() -> str:

@@ -43,8 +43,16 @@ Needs `numpy` and `scipy` only (`pip install -r requirements.txt`).
 
 ## The chemistry is swappable, and it says which one it used
 
-`chemistry.py` loads every CSV in `aspen_tables/`. Right now that folder holds
-`placeholder_ph_table.csv`, generated from the report's charge balance — **not Aspen**.
+`chemistry.py` loads every CSV in `aspen_tables/` whose name does not start with `_`. Right
+now that is `placeholder_nahco3_ph_table.csv`: the tank liquid (5.000 L distilled water +
+0.420 g NaHCO3, 1 mmol/L) as a closed carbonate model — **not Aspen**. `excess_mmol = 0` is
+that liquid as prepared, about **pH 8.30, not 7**. The old pure-water table is kept as
+`_placeholder_pure_water_ph_table.csv` for the known-answer tests only.
+
+With table chemistry on (`engine.use_table_chemistry()`, which the batch, the live mode and
+the planner all call), both the tank's pH and the optimiser's pH -> mmol conversion
+(`model.n_of`) come from this table. The report's closed forms are only used by the
+known-answer tests, through `engine.use_analytic_chemistry()`.
 
 Every CSV the batch writes carries a `chem_source` column, every figure carries it in the
 footer, and `sim.chemistry.table_provenance()` returns it. It reads `PLACEHOLDER` today and
@@ -52,10 +60,11 @@ footer, and `sim.chemistry.table_provenance()` returns it. It reads `PLACEHOLDER
 placeholder, re-run the batch.
 
 The lookup interpolates the net strong-acid concentration rather than pH directly, because
-pH moves about 2 units over 0.01 mmol near neutral while the table's grid there is
-0.002 mmol. Interpolating pH would add up to 0.07 pH of error at exactly neutral; in
-concentration space the error is below 1e-5 pH. Same table, same grid, no extra points
-needed from Aspen.
+in pure water pH moves about 2 units over 0.01 mmol near neutral while the table's grid there
+is 0.002 mmol. Interpolating pH would add up to 0.07 pH of error at exactly neutral; in
+concentration space the error is below 1e-5 pH. The NaHCO3 liquid instead bends sharply at
+its equivalence points (±5 mmol), so its table carries the 0.05 mmol steps out to ±8 mmol
+(see `aspen_tables/README.md`); that keeps the lookup within 0.005 pH everywhere.
 
 ## Sign convention — the one thing that will bite you
 

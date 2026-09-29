@@ -27,9 +27,10 @@ def _table_ph(n, V, T=25.0, CT=0.0, pKa=6.35):
 
     n  : net excess strong ACID, mol (the optimiser's convention)
     V  : tank fill, L
-    CT : weak-acid buffer. The Aspen tables are unbuffered, so any buffered case
-         (used only for fault injection, assumption B1) falls back to the analytic
-         solution and is flagged by buffered_calls().
+    CT : an extra weak-acid buffer (fault injection only, assumption B1). The table has
+         no such case, so it falls back to the analytic solution, which models pure
+         water plus that buffer at pH 7 and ignores the tank's own NaHCO3. Flagged by
+         buffered_calls(); nothing in the batch uses it.
     """
     if CT and CT > 0:
         _table_ph.buffered += 1
