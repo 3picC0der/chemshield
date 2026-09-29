@@ -269,6 +269,14 @@ def train(data_dir: Path, out_dir: Path, seed: int = SEED, quiet: bool = False) 
     dep_te = run_deployed(model, test_df)
     ev["test"]["model_a_deployed"] = metrics(y_te, dep_te["block"].to_numpy())
     ev["test"]["model_a_deployed"]["answers"] = dep_te["label"].value_counts().to_dict()
+    by_type = {}
+    for rt, d in test_df.assign(block=dep_te["block"].to_numpy()).groupby("request_type"):
+        harmful = d["harmful"] == 1
+        by_type[rt] = {"rows": int(len(d)), "harmful": int(harmful.sum()),
+                       "harmful_caught": int((d["block"][harmful] == 1).sum()),
+                       "benign": int((~harmful).sum()),
+                       "benign_blocked": int((d["block"][~harmful] == 1).sum())}
+    ev["test_by_request_type"] = by_type
     dep_ho = run_deployed(model, heldout)
     ev["held_out_cumulative"]["model_a_deployed"] = metrics(y_ho, dep_ho["block"].to_numpy())
     if len(invalid):
@@ -318,6 +326,12 @@ def model_card(ev: dict, same: pd.DataFrame, residual) -> str:
         f"{r.truth.replace('_CONTEXT', '')} | {r.model_a.replace('_CONTEXT', '')} ({r.score:.2f}) |"
         for r in same.itertuples())
     top = sorted(zip(FEATURES, residual.feature_importances_), key=lambda x: -x[1])[:5]
+    names = {"planner": "Planner (MILP) recovery doses", "rule_controller": "Naive controller doses",
+             "fine_correction": "Small fine corrections", "wrong_direction": "Wrong direction",
+             "oversize": "Oversize bulk doses", "random": "Random doses"}
+    type_md = "\n".join(
+        f"| {names.get(k, k)} | {v['harmful_caught']} of {v['harmful']} | {v['benign_blocked']} of {v['benign']} |"
+        for k, v in ev["test_by_request_type"].items())
     return f"""# Model A model card
 
 Trained {ev['trained_utc']}, model {MODEL_VERSION}, label policy {LABEL_POLICY_VERSION}, feature schema {FEATURE_SCHEMA_VERSION}, scikit-learn {ev['platform']['sklearn']}.
@@ -333,6 +347,12 @@ For each dose request that has passed the gateway's fixed checks, Model A answer
 {chr(10).join(rows)}
 
 The learned part caught {ev['added_by_learned_part_on_test']['harmful_caught']} harmful requests the physics rule missed, at the cost of {ev['added_by_learned_part_on_test']['benign_blocked']} extra benign blocks.
+
+By kind of request (Model A as it runs on the Pi):
+
+| Request | Harmful ones blocked | Good ones blocked |
+|---|---|---|
+{type_md}
 
 **Never-seen pattern** (many small same-direction doses, {ho['model_a_hybrid']['rows']} requests, {ho['model_a_hybrid']['harmful']} harmful): physics rule recall {ho['physics_rule']['harmful_recall']:.3f}, Model A {ho['model_a_hybrid']['harmful_recall']:.3f} (false blocks {ho['model_a_hybrid']['benign_false_block_rate']:.3f}).
 

@@ -1,0 +1,17 @@
+feature,importance
+ph_std_5s,0.2551561101754073
+candidate_mmol,0.1790951291893381
+candidate_direction,0.12245383749857751
+ph_slope_5s,0.08889131285185242
+cumulative_signed_mmol,0.07090843547543964
+ph_mean_5s,0.06533179033330805
+level_margin_l,0.06198407302072606
+predicted_post_ph,0.05283660181852921
+measured_predicted_residual,0.044645173276793494
+predicted_safety_margin,0.025506976851645744
+ph_curvature_5s,0.018140809427821977
+cumulative_abs_mmol,0.008293675414447378
+sample_age_s,0.0038525998402900025
+heartbeat_age_s,0.0029034748258230632
+request_delivery_residual,0.0
+mixer_speed_ratio,0.0

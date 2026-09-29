@@ -61,12 +61,12 @@ BULK_M = 0.5
 RANGES = {
     "episode_kind_probs": {"normal": 0.40, "recovery": 0.50, "cumulative": 0.10},
     "fill_L": (4.8, 5.2),
-    "baking_soda_factor": (0.85, 1.15),     # weighing, dissolving and CO2 loss
+    "baking_soda_factor": (0.95, 1.05),     # weighing 0.420 g, dissolving, some CO2 exchange
     "start_ph_normal": (6.0, 8.5),
     "start_ph_cumulative": (6.5, 7.8),
     "upset_ml_0.5M": (2.0, 80.0),           # log-uniform: the small demo overdose to the 80 mL design event
     "upset_acid_fraction": 0.6,
-    "probe_offset_sd": 0.10,                # calibration error, clipped at +/-0.3 pH
+    "probe_offset_sd": 0.05,                # left after the morning 2-point calibration, clipped at +/-0.15 pH
     "probe_noise_sd": (0.005, 0.04),
     "probe_lag_tau_s": (3.0, 20.0),
     "hand_dose_bias_sd": 0.03,              # syringe reading error per episode
@@ -146,7 +146,8 @@ def sample_episodes(n: int, seed: int, liquid: str) -> list[Episode]:
             duration_s=duration,
             fill_L=float(rng.uniform(*RANGES["fill_L"])),
             start_ph=float(rng.uniform(*start)),
-            probe_offset=float(np.clip(rng.normal(0.0, RANGES["probe_offset_sd"]), -0.3, 0.3)),
+            probe_offset=float(np.clip(rng.normal(0.0, RANGES["probe_offset_sd"]),
+                                       -3 * RANGES["probe_offset_sd"], 3 * RANGES["probe_offset_sd"])),
             noise_sd=float(rng.uniform(*RANGES["probe_noise_sd"])),
             tau_s=float(rng.uniform(*RANGES["probe_lag_tau_s"])),
             hand_bias=float(1.0 + rng.normal(0.0, RANGES["hand_dose_bias_sd"])),
@@ -478,7 +479,7 @@ File: `{m['csv']}` (sha256 `{m['csv_sha256'][:16]}...`).
 - **Tank liquid:** {m['liquid']} (5.000 L distilled water + 0.420 g baking soda). The true amount of baking soda varies by x{r['baking_soda_factor'][0]}-{r['baking_soda_factor'][1]} per episode (weighing, dissolving, CO2 loss).
 - **The Pi's chemistry:** features use {chem_note} through `sim.chemistry`, the same table Hattan's planner uses (`{', '.join(m['chem_table_files'])}`).
 - **Episodes:** fill {r['fill_L'][0]}-{r['fill_L'][1]} L. Normal episodes start at pH {r['start_ph_normal'][0]}-{r['start_ph_normal'][1]}. Recovery episodes add an upset of {r['upset_ml_0.5M'][0]}-{r['upset_ml_0.5M'][1]} mL of 0.5 M acid or base, bypassing the gateway.
-- **Probe:** one reading per second, rounded to 0.01 like the Uno's `PH,x` line. Calibration offset sd {r['probe_offset_sd']} pH, noise {r['probe_noise_sd'][0]}-{r['probe_noise_sd'][1]} pH, lag {r['probe_lag_tau_s'][0]}-{r['probe_lag_tau_s'][1]} s. *These are assumptions until the probe is measured.*
+- **Probe:** one reading per second, rounded to 0.01 like the Uno's `PH,x` line. Calibration offset sd {r['probe_offset_sd']} pH (clipped at 3 sd), noise {r['probe_noise_sd'][0]}-{r['probe_noise_sd'][1]} pH, lag {r['probe_lag_tau_s'][0]}-{r['probe_lag_tau_s'][1]} s. *These are assumptions until the probe is measured.*
 - **Hand dosing:** syringe error sd {r['hand_dose_bias_sd']} per episode + {r['hand_dose_noise_sd']} per dose; added {r['hand_delay_s'][0]}-{r['hand_delay_s'][1]} s after the LED.
 - **Faults** in {int(r['fault_probability'] * 100)}% of normal/recovery episodes: stuck probe, drifting probe, USB gap (no readings), no stirring, wrong bottle.
 - **Requests:** every {r['request_gap_s'][0]:.0f}-{r['request_gap_s'][1]:.0f} s. Recovery doses come from Hattan's MILP planner; the rest are fine corrections, a naive controller, wrong direction, oversize bulk doses and random doses. The same doses appear in both safe and harmful contexts.

@@ -1,0 +1,403 @@
+{
+  "scope": "simulation evidence for the PPR; not physical validation",
+  "trained_utc": "2026-09-29T23:04:19+00:00",
+  "seed": 261,
+  "dataset": {
+    "rows": 28974,
+    "valid_rows": 28716,
+    "invalid_rows": 258,
+    "episodes": 3000,
+    "liquid": "bicarb_1mM",
+    "chem_source": "PLACEHOLDER",
+    "csv_sha256": "e795013d0700ebef91773de3dd2e73b449a04878edc289a5a0b503e086ed5719",
+    "git_commit": "e108312",
+    "label_policy_version": "v1"
+  },
+  "split_rows": {
+    "train": 16050,
+    "validation": 5290,
+    "test": 5408,
+    "held_out_cumulative": 1968,
+    "invalid_fail_closed": 258
+  },
+  "harmful_fraction": {
+    "train": 0.3012,
+    "test": 0.3053
+  },
+  "thresholds": {
+    "logistic_regression": 0.115,
+    "random_forest": 0.17,
+    "gradient_boosting": 0.08,
+    "model_a": 0.18
+  },
+  "validation": {
+    "logistic_regression": {
+      "rows": 5290,
+      "harmful": 1563,
+      "benign": 3727,
+      "harmful_recall": 0.991,
+      "benign_false_block_rate": 0.4784,
+      "harmful_missed": 14,
+      "benign_blocked": 1783,
+      "precision_harmful": 0.4649,
+      "accuracy": 0.6603,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          1944,
+          1783
+        ],
+        [
+          14,
+          1549
+        ]
+      ]
+    },
+    "random_forest": {
+      "rows": 5290,
+      "harmful": 1563,
+      "benign": 3727,
+      "harmful_recall": 0.9904,
+      "benign_false_block_rate": 0.1065,
+      "harmful_missed": 15,
+      "benign_blocked": 397,
+      "precision_harmful": 0.7959,
+      "accuracy": 0.9221,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3330,
+          397
+        ],
+        [
+          15,
+          1548
+        ]
+      ]
+    },
+    "gradient_boosting": {
+      "rows": 5290,
+      "harmful": 1563,
+      "benign": 3727,
+      "harmful_recall": 0.9904,
+      "benign_false_block_rate": 0.1293,
+      "harmful_missed": 15,
+      "benign_blocked": 482,
+      "precision_harmful": 0.7626,
+      "accuracy": 0.906,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3245,
+          482
+        ],
+        [
+          15,
+          1548
+        ]
+      ]
+    },
+    "model_a_hybrid": {
+      "rows": 5290,
+      "harmful": 1563,
+      "benign": 3727,
+      "harmful_recall": 0.9661,
+      "benign_false_block_rate": 0.0287,
+      "harmful_missed": 53,
+      "benign_blocked": 107,
+      "precision_harmful": 0.9338,
+      "accuracy": 0.9698,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3620,
+          107
+        ],
+        [
+          53,
+          1510
+        ]
+      ]
+    }
+  },
+  "test": {
+    "gateway_only": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.0,
+      "benign_false_block_rate": 0.0,
+      "harmful_missed": 1651,
+      "benign_blocked": 0,
+      "precision_harmful": 0.0,
+      "accuracy": 0.6947,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3757,
+          0
+        ],
+        [
+          1651,
+          0
+        ]
+      ]
+    },
+    "physics_rule": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.8995,
+      "benign_false_block_rate": 0.0189,
+      "harmful_missed": 166,
+      "benign_blocked": 71,
+      "precision_harmful": 0.9544,
+      "accuracy": 0.9562,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3686,
+          71
+        ],
+        [
+          166,
+          1485
+        ]
+      ]
+    },
+    "logistic_regression": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.9915,
+      "benign_false_block_rate": 0.474,
+      "harmful_missed": 14,
+      "benign_blocked": 1781,
+      "precision_harmful": 0.4789,
+      "accuracy": 0.6681,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          1976,
+          1781
+        ],
+        [
+          14,
+          1637
+        ]
+      ]
+    },
+    "random_forest": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.9903,
+      "benign_false_block_rate": 0.1235,
+      "harmful_missed": 16,
+      "benign_blocked": 464,
+      "precision_harmful": 0.7789,
+      "accuracy": 0.9112,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3293,
+          464
+        ],
+        [
+          16,
+          1635
+        ]
+      ]
+    },
+    "gradient_boosting": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.9897,
+      "benign_false_block_rate": 0.1485,
+      "harmful_missed": 17,
+      "benign_blocked": 558,
+      "precision_harmful": 0.7454,
+      "accuracy": 0.8937,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3199,
+          558
+        ],
+        [
+          17,
+          1634
+        ]
+      ]
+    },
+    "model_a_hybrid": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.974,
+      "benign_false_block_rate": 0.0423,
+      "harmful_missed": 43,
+      "benign_blocked": 159,
+      "precision_harmful": 0.91,
+      "accuracy": 0.9626,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3598,
+          159
+        ],
+        [
+          43,
+          1608
+        ]
+      ]
+    },
+    "model_a_deployed": {
+      "rows": 5408,
+      "harmful": 1651,
+      "benign": 3757,
+      "harmful_recall": 0.974,
+      "benign_false_block_rate": 0.0423,
+      "harmful_missed": 43,
+      "benign_blocked": 159,
+      "precision_harmful": 0.91,
+      "accuracy": 0.9626,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          3598,
+          159
+        ],
+        [
+          43,
+          1608
+        ]
+      ],
+      "answers": {
+        "ACCEPTABLE_CONTEXT": 3641,
+        "HARMFUL_CONTEXT": 1767
+      }
+    }
+  },
+  "held_out_cumulative": {
+    "physics_rule": {
+      "rows": 1968,
+      "harmful": 964,
+      "benign": 1004,
+      "harmful_recall": 0.9471,
+      "benign_false_block_rate": 0.0169,
+      "harmful_missed": 51,
+      "benign_blocked": 17,
+      "precision_harmful": 0.9817,
+      "accuracy": 0.9654,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          987,
+          17
+        ],
+        [
+          51,
+          913
+        ]
+      ]
+    },
+    "model_a_hybrid": {
+      "rows": 1968,
+      "harmful": 964,
+      "benign": 1004,
+      "harmful_recall": 0.9471,
+      "benign_false_block_rate": 0.0199,
+      "harmful_missed": 51,
+      "benign_blocked": 20,
+      "precision_harmful": 0.9786,
+      "accuracy": 0.9639,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          984,
+          20
+        ],
+        [
+          51,
+          913
+        ]
+      ]
+    },
+    "model_a_deployed": {
+      "rows": 1968,
+      "harmful": 964,
+      "benign": 1004,
+      "harmful_recall": 0.9471,
+      "benign_false_block_rate": 0.0199,
+      "harmful_missed": 51,
+      "benign_blocked": 20,
+      "precision_harmful": 0.9786,
+      "accuracy": 0.9639,
+      "confusion_matrix_[[tn,fp],[fn,tp]]": [
+        [
+          984,
+          20
+        ],
+        [
+          51,
+          913
+        ]
+      ]
+    }
+  },
+  "added_by_learned_part_on_test": {
+    "harmful_caught": 123,
+    "benign_blocked": 88
+  },
+  "test_by_request_type": {
+    "fine_correction": {
+      "rows": 527,
+      "harmful": 0,
+      "harmful_caught": 0,
+      "benign": 527,
+      "benign_blocked": 0
+    },
+    "oversize": {
+      "rows": 643,
+      "harmful": 544,
+      "harmful_caught": 543,
+      "benign": 99,
+      "benign_blocked": 31
+    },
+    "planner": {
+      "rows": 455,
+      "harmful": 55,
+      "harmful_caught": 43,
+      "benign": 400,
+      "benign_blocked": 26
+    },
+    "random": {
+      "rows": 1177,
+      "harmful": 543,
+      "harmful_caught": 536,
+      "benign": 634,
+      "benign_blocked": 33
+    },
+    "rule_controller": {
+      "rows": 1754,
+      "harmful": 58,
+      "harmful_caught": 38,
+      "benign": 1696,
+      "benign_blocked": 33
+    },
+    "wrong_direction": {
+      "rows": 852,
+      "harmful": 451,
+      "harmful_caught": 448,
+      "benign": 401,
+      "benign_blocked": 36
+    }
+  },
+  "fail_closed": {
+    "rows": 258,
+    "uncertain": 258,
+    "reasons": {
+      "STALE_SAMPLE": 176,
+      "BAD_FEATURE": 82
+    }
+  },
+  "host_latency_decide": {
+    "n": 1000,
+    "p50_ms": 0.2485,
+    "p99_ms": 0.2612,
+    "max_ms": 0.35
+  },
+  "platform": {
+    "python": "3.12.12",
+    "sklearn": "1.9.1"
+  }
+}
