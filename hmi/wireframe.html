@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>ChemShield HMI wireframe</title>
+<!-- Static design reference for DESIGN.md. No live data, no scripts.
+     Khalid: copy the layout and the type sizes; wire the values to I2 / I3 / I4. -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Liberation Sans",Arial,Helvetica,sans-serif;background:#EDEFF2;width:1400px;padding:16px;color:#111318}
+.bar{background:#17365D;color:#fff;padding:12px 18px;border-radius:6px 6px 0 0;overflow:hidden}
+.bar h1{float:left;font-size:20px;letter-spacing:.4px;white-space:nowrap}
+.bar .r{float:right;font-size:14px;opacity:.9;line-height:24px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#3FBF7F;margin-right:6px}
+.alert{background:#FBE9E9;border:3px solid #A83232;border-top:none;padding:13px 18px;overflow:hidden}
+.alert .t{float:left;font-size:22px;font-weight:bold;color:#A83232;letter-spacing:.3px;line-height:30px}
+.alert .m{float:right;text-align:right}
+.metric{display:inline-block;margin-left:26px;text-align:left}
+.metric .lab{font-size:12px;color:#7A2626;letter-spacing:.6px;text-transform:uppercase}
+.metric .val{font-size:20px;font-weight:bold;color:#A83232}
+.grid{margin-top:14px;overflow:hidden}
+.c1{float:left;width:352px;margin-right:12px}
+.c2{float:left;width:700px;margin-right:12px}
+.c3{float:left;width:310px}
+.clr{clear:both}
+.card{background:#fff;border:1px solid #CBD2DA;border-radius:6px;padding:14px 16px}
+.card+.card{margin-top:12px}
+.card h2{font-size:13px;letter-spacing:1.1px;color:#5F6670;margin-bottom:11px;text-transform:uppercase}
+.ph{font-size:52px;font-weight:bold;color:#B97800;line-height:1}
+.phu{font-size:15px;color:#5F6670;margin-left:8px}
+.scale{position:relative;height:28px;margin:16px 0 6px}
+.scale .track{position:absolute;top:10px;left:0;right:0;height:10px;background:#E4E8ED;border-radius:5px}
+.scale .band{position:absolute;top:10px;height:10px;background:#B7E0CB;border-radius:2px}
+.scale .guard{position:absolute;top:5px;width:2px;height:20px;background:#A83232}
+.scale .now{position:absolute;top:2px;width:4px;height:26px;background:#111318}
+.ticks{display:flex;justify-content:space-between;font-size:12px;color:#5F6670}
+.chart{position:relative;height:110px;margin-top:10px;background:#FAFBFC;border:1px solid #E4E8ED;border-radius:4px;overflow:hidden}
+.chart .lim{position:absolute;left:0;right:0;height:0;border-top:2px solid #167A5A}
+.chart .far{position:absolute;left:0;right:0;height:0;border-top:1px dashed #A83232}
+.chart .cap{position:absolute;right:5px;font-size:11px;font-weight:bold;background:#FAFBFC;padding:0 3px}
+.chart svg{position:absolute;inset:0}
+.kv{display:flex;justify-content:space-between;font-size:15px;padding:6px 0;border-bottom:1px solid #F0F2F5}
+.kv:last-child{border-bottom:none}
+.kv .k{color:#5F6670}
+.kv .v{font-weight:bold}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-size:12px;letter-spacing:.7px;color:#5F6670;text-transform:uppercase;padding:0 7px 7px;border-bottom:1px solid #CBD2DA}
+td{padding:7px;border-bottom:1px solid #F0F2F5}
+.done{color:#167A5A;font-weight:bold}.now2{color:#B97800;font-weight:bold}.wait{color:#8A9099}
+.rowdone{background:#F6FAF8}.rownow{background:#FDF6E8}
+button{border:none;border-radius:5px;padding:15px;font-size:18px;font-weight:bold;letter-spacing:.5px;cursor:pointer;font-family:inherit;width:100%}
+.halt{background:#A83232;color:#fff;margin-bottom:10px}
+.ack{background:#fff;color:#111318;border:2px solid #5F6670;margin-bottom:4px}
+.req{background:#17365D;color:#fff;font-size:16px;padding:12px}
+select,input{font-family:inherit;font-size:16px;padding:9px;border:1px solid #CBD2DA;border-radius:4px;width:100%;margin-bottom:8px;background:#fff}
+.note{font-size:14px;color:#5F6670;margin-top:11px;line-height:1.55}
+.reply{font-size:14px;margin-top:9px;padding:9px 11px;border-radius:4px;background:#FBE9E9;border:1px solid #E3B9B9;color:#A83232}
+.reply b{font-family:"Liberation Mono",monospace}
+.half{float:left;width:48%}.half+.half{margin-left:4%}
+.log td{font-family:"Liberation Mono",monospace;font-size:14px;padding:6px 7px}
+.src{color:#B97800;font-weight:bold}
+.rej{color:#A83232;font-weight:bold}
+.tabs{float:right}
+.tab{display:inline-block;font-size:13px;padding:5px 12px;border:1px solid #CBD2DA;border-radius:4px;margin-left:5px;color:#5F6670;cursor:pointer}
+.tab.on{background:#17365D;color:#fff;border-color:#17365D;font-weight:bold}
+.tag{display:inline-block;font-size:12px;padding:3px 8px;border-radius:3px;background:#EFE9F7;color:#6C55A3;font-weight:bold;margin-left:8px}
+.bararea{height:16px;background:#E4E8ED;border-radius:8px;overflow:hidden;margin-top:7px}
+.barfill{height:100%;background:#167A5A;border-radius:8px}
+.wf{font-size:13px;color:#6C55A3;background:#EFE9F7;border:1px solid #D6CBEA;border-radius:5px;padding:9px 13px;margin-bottom:12px}
+</style></head><body>
+
+<div class="wf"><b>Wireframe only.</b> Static design reference for <code>hmi/DESIGN.md</code>.
+Values are illustrative; wire them to I2 (state), I3 (Model A) and I4 (plan).</div>
+
+<div class="bar"><h1>ChemShield &nbsp;&mdash;&nbsp; Neutralisation Tank T-101</h1>
+<div class="r"><span class="dot"></span>Gateway online &nbsp;|&nbsp; Operator: A. Yamani &nbsp;|&nbsp; 14:22:07</div></div>
+
+<div class="alert">
+  <div class="t">&#9888; UNSAFE DOSING EVENT &mdash; RECOVERY IN PROGRESS</div>
+  <div class="m">
+    <div class="metric"><div class="lab">Event</div><div class="val">E-2291</div></div>
+    <div class="metric"><div class="lab">Recovery</div><div class="val">96 s / 300 s</div></div>
+    <div class="metric"><div class="lab">Event reagent</div><div class="val">24.3 / 50 mmol</div></div>
+  </div>
+</div>
+
+<div class="grid">
+ <div class="c1">
+  <div class="card">
+   <h2>Tank pH</h2>
+   <div><span class="ph">4.63</span><span class="phu">pH &middot; rising &middot; sample 1 s old</span></div>
+   <div class="scale">
+     <div class="track"></div><div class="band" style="left:40%;width:25%"></div>
+     <div class="guard" style="left:35%"></div><div class="guard" style="left:75%"></div>
+     <div class="now" style="left:26.3%"></div>
+   </div>
+   <div class="ticks"><span>2</span><span>4</span><span>5.5</span><span>6.0</span><span>8.5</span><span>9.5</span><span>12</span></div>
+
+   <div class="chart">
+     <!-- the 6.0 and 8.5 lines must be DRAWN, not implied: INT-AT-02 asks for them -->
+     <div class="far" style="top:14px"></div><div class="cap" style="top:5px;color:#A83232">9.5</div>
+     <div class="lim" style="top:32px"></div><div class="cap" style="top:23px;color:#167A5A">8.5</div>
+     <div class="lim" style="top:74px"></div><div class="cap" style="top:65px;color:#167A5A">6.0</div>
+     <div class="far" style="top:92px"></div><div class="cap" style="top:83px;color:#A83232">5.5</div>
+     <svg viewBox="0 0 340 110" preserveAspectRatio="none">
+       <polyline points="4,104 30,103 56,100 82,97 108,92 134,88 160,84 186,79 212,74 238,68 264,62 290,55 316,48 334,44"
+                 fill="none" stroke="#167A5A" stroke-width="2.5"/>
+     </svg>
+   </div>
+   <div class="ticks" style="margin-top:5px"><span>&minus;300 s</span><span>now</span></div>
+   <div class="kv" style="margin-top:8px"><span class="k">Recovery band</span><span class="v">6.0 &ndash; 8.5</span></div>
+   <div class="kv"><span class="k">Far-side limits</span><span class="v">5.5 / 9.5</span></div>
+   <div class="kv"><span class="k">Reading</span><span class="v">mean of 3, &plusmn;0.1 pH</span></div>
+  </div>
+
+  <div class="card">
+   <h2>Event detail</h2>
+   <div class="kv"><span class="k">Class</span><span class="v">Unauthorised acid dose</span></div>
+   <div class="kv"><span class="k">Model A</span><span class="v">HARMFUL_CONTEXT &middot; 0.94</span></div>
+   <div class="kv"><span class="k">Model A latency</span><span class="v">3.9 ms</span></div>
+   <div class="kv"><span class="k">Rejected command</span><span class="v">REPLAY, source WS-03</span></div>
+   <div class="kv"><span class="k">Delivered before block</span><span class="v">60 mL of 0.5 M acid</span></div>
+  </div>
+ </div>
+
+ <div class="card c2">
+  <h2>Recovery plan &mdash; re-solved after every reading <span class="tag">robust MILP &middot; optimal &middot; 12 ms</span></h2>
+  <table>
+   <tr><th style="width:38px">#</th><th>Reagent channel</th><th style="width:86px">Dose</th><th style="width:92px">Reagent</th><th style="width:74px">Hold</th><th style="width:116px">Status</th></tr>
+   <tr class="rowdone"><td>1</td><td>NaOH 0.5 M <span style="color:#5F6670">bulk</span></td><td>20.00 mL</td><td>10.000 mmol</td><td>15 s</td><td class="done">complete</td></tr>
+   <tr class="rowdone"><td>2</td><td>NaOH 0.5 M <span style="color:#5F6670">bulk</span></td><td>20.00 mL</td><td>10.000 mmol</td><td>15 s</td><td class="done">complete</td></tr>
+   <tr class="rownow"><td>3</td><td>NaOH 0.5 M <span style="color:#5F6670">bulk</span></td><td>8.52 mL</td><td>4.260 mmol</td><td>15 s</td><td class="now2">mixing 8 s</td></tr>
+   <tr><td>4</td><td>NaOH 0.005 M <span style="color:#5F6670">fine</span></td><td>2.66 mL</td><td>0.013 mmol</td><td>15 s</td><td class="wait">queued</td></tr>
+  </table>
+  <div style="margin-top:15px;overflow:hidden">
+   <div class="half">
+    <div class="kv"><span class="k">Reagent used this event</span><span class="v">24.260 mmol</span></div>
+    <div class="kv"><span class="k">Ceiling (C3)</span><span class="v">50 mmol <span style="color:#167A5A">&mdash; 51% margin</span></span></div>
+    <div class="bararea"><div class="barfill" style="width:48.5%"></div></div>
+   </div>
+   <div class="half">
+    <div class="kv"><span class="k">Elapsed / limit (S6)</span><span class="v">96 s / 300 s</span></div>
+    <div class="kv"><span class="k">Predicted far-side pH</span><span class="v">6.36 <span style="color:#167A5A">&mdash; no overshoot</span></span></div>
+    <div class="bararea"><div class="barfill" style="width:32%"></div></div>
+   </div>
+   <div class="clr"></div>
+  </div>
+  <div class="note"><b>Why this plan:</b> the optimiser uses the least reagent that still keeps the worst case
+  inside the band, subject to the 20 mL dose cap and 15 s mixing hold (S2), the 50 mmol event ceiling (C3),
+  reservoir and level limits, and the 300 s budget (S6). Doses 4 onward use the 0.005 M channel because the
+  remaining excess is below what the bulk channel can meter. Every dose is planned against a fresh averaged
+  reading and against the worst case allowed by probe, pump and fill-volume error, so a &plusmn;0.1 pH error
+  cannot push the tank past 9.5.</div>
+ </div>
+
+ <div class="c3">
+  <div class="card">
+   <h2>Operator action</h2>
+   <button class="halt">HALT DOSING</button>
+   <button class="ack">ACKNOWLEDGE</button>
+   <div class="note">HALT stops the sequence and holds the tank. Recovery resumes only on a
+   confirmation.</div>
+  </div>
+
+  <div class="card">
+   <h2>Manual dose request</h2>
+   <select><option>NaOH 0.5 M bulk (BASE_BULK)</option><option>NaOH 0.005 M fine (BASE_FINE)</option>
+   <option>HCl 0.5 M bulk (ACID_BULK)</option><option>HCl 0.005 M fine (ACID_FINE)</option></select>
+   <input value="10.0" aria-label="dose in mL">
+   <button class="req">REQUEST DOSE</button>
+   <div class="reply">Rejected &mdash; <b>LIMIT</b><br>would take this event to 54.3 mmol, over the 50 mmol ceiling</div>
+  </div>
+
+  <div class="card">
+   <h2>Safety state</h2>
+   <div class="kv"><span class="k">Command path</span><span class="v">gateway only</span></div>
+   <div class="kv"><span class="k">Dose envelope</span><span class="v">validated</span></div>
+   <div class="kv"><span class="k">Mixing lockout</span><span class="v">active</span></div>
+   <div class="kv"><span class="k">AI authority</span><span class="v">advisory only</span></div>
+   <div class="kv"><span class="k">Audit chain</span><span class="v">intact</span></div>
+  </div>
+ </div>
+</div>
+<div class="clr"></div>
+
+<div class="card log" style="margin-top:14px">
+ <h2>Audit log &mdash; append-only, hash chained
+   <span class="tabs"><span class="tab">all</span><span class="tab on">rejected only</span></span></h2>
+ <table>
+  <tr><th style="width:78px">Time</th><th style="width:96px">Source</th><th>Message</th><th style="width:150px">Reason</th><th style="width:150px">Hash</th></tr>
+  <tr><td>14:22:05</td><td class="src">gateway</td><td>manual dose 20.0 mL BASE_BULK from HMI</td><td class="rej">LIMIT</td><td>h=9c41&hellip;77de</td></tr>
+  <tr><td>14:21:48</td><td class="src">gateway</td><td>dose 20.0 mL BASE_BULK from WS-03</td><td class="rej">LOCKOUT</td><td>h=2be7&hellip;10a4</td></tr>
+  <tr><td>14:20:31</td><td class="src">gateway</td><td>dose 45.0 mL ACID_BULK from WS-03</td><td class="rej">REPLAY</td><td>h=4f1c&hellip;9ab2</td></tr>
+  <tr><td>14:20:29</td><td class="src">model A</td><td>context HARMFUL, score 0.94, 3.9 ms</td><td class="rej">MODEL_A_BLOCK</td><td>h=7d20&hellip;1c55</td></tr>
+  <tr><td>14:20:12</td><td class="src">gateway</td><td>dose 20.0 mL ACID_BULK from WS-03</td><td class="rej">STALE</td><td>h=e81b&hellip;33c0</td></tr>
+ </table>
+</div>
+</body></html>
