@@ -13,11 +13,10 @@
     "sequence_number",
     "user_role",
     "action",
-    "reagent",
+    "channel_id",
     "volume_ml",
     "flow_ml_min",
     "mixing_time_s",
-    "recovery_mmol_after_command",
     "recovery_plan_hash",
     "client_cert_fingerprint",
     "hmac_sha256"
@@ -62,12 +61,15 @@
         "HOLD"
       ]
     },
-    "reagent": {
+    "channel_id": {
       "type": "string",
+      "description": "Bottle: 0.5 M or 0.005 M NaOH / HCl. NONE only for HOLD. The gateway computes mmol = volume_ml x molarity.",
       "enum": [
-        "acid",
-        "base",
-        "none"
+        "BASE_BULK",
+        "BASE_FINE",
+        "ACID_BULK",
+        "ACID_FINE",
+        "NONE"
       ]
     },
     "volume_ml": {
@@ -83,11 +85,6 @@
     "mixing_time_s": {
       "type": "number",
       "minimum": 15
-    },
-    "recovery_mmol_after_command": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 50
     },
     "recovery_plan_hash": {
       "type": "string"

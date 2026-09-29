@@ -23,7 +23,7 @@
 | Direct actuator command | Pump command bypasses security checks | firewall isolation, no IP forwarding, actuator accepts only gateway path | C2 |
 | Replayed command | Old valid command sent again | nonce, command ID, sequence memory, audit memory after reboot | S3 |
 | Stale command | Command arrives too late for current process state | UTC timestamp freshness window ±2 s | S3 |
-| Modified command | Attacker changes volume/reagent after signing | HMAC-SHA256 over canonical command body | C2/S3 |
+| Modified command | Attacker changes volume/channel after signing | HMAC-SHA256 over canonical command body | C2/S3 |
 | Wrong role/session | Unauthorized user sends dosing command | active session ID and allowed role checks | C2 |
 | Oversize dose | Command exceeds safe process limit | ≤20 mL and ≤50 mmol gateway checks | S2/C3 support |
 | Burst dosing | Command arrives during mixing lockout | gateway state lockout check | S2 support |

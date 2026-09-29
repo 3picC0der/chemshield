@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import math
 import time
 from typing import Any, Callable
 
 from .audit_log import HashChainedAuditLog
 from .auth import is_valid_hmac
-from .config import GatewayConfig
+from .config import NO_CHANNEL, GatewayConfig
 from .model_a_client import FakeModelAClient
 from .models import ProcessState, ValidationDecision
 from .simulated_actuator import SimulatedActuator
@@ -22,11 +23,10 @@ REQUIRED_FIELDS: tuple[str, ...] = (
     "sequence_number",
     "user_role",
     "action",
-    "reagent",
+    "channel_id",
     "volume_ml",
     "flow_ml_min",
     "mixing_time_s",
-    "recovery_mmol_after_command",
     "recovery_plan_hash",
     "client_cert_fingerprint",
     "hmac_sha256",
@@ -40,7 +40,10 @@ class GatewayValidator:
 
     Validation order:
     schema -> role/session -> HMAC -> timestamp -> nonce -> sequence ->
-    rate/state -> <=20 mL / <=50 mmol / 15 s lockout -> Model A -> certificate -> actuator.
+    rate/state -> 15 s lockout -> <=20 mL / <=50 mmol per event -> Model A -> certificate -> actuator.
+
+    The mmol of a dose is computed here, volume_ml x the channel's bottle molarity, and
+    added to a per-event total (event_mmol_used). Nothing the client says about mmol is used.
     """
 
     def __init__(
@@ -65,6 +68,7 @@ class GatewayValidator:
         self.processed_command_ids: set[str] = set()
         self.persisted_command_ids: set[str] = set()
         self.last_sequence_number: int = 0
+        self.event_mmol_used: dict[str, float] = {}   # event_id -> accepted mmol
 
     def reboot(self) -> None:
         """A restart begins in SAFE_HOLD and keeps replay memory."""
@@ -89,9 +93,13 @@ class GatewayValidator:
     def validate(self, command: dict[str, Any], *, category: str = "manual", received_at_utc: datetime | None = None) -> ValidationDecision:
         started = time.perf_counter()
         received_at_utc = received_at_utc or datetime.now(timezone.utc)
+        dose_mmol = 0.0
+        event_total = self.event_mmol_used.get(str(command.get("event_id", "")), 0.0)
 
         def finish(decision: str, code: str, detail: str, forwarded: bool = False, model: dict[str, Any] | None = None) -> ValidationDecision:
             model = model or {"label": "NOT_CALLED", "score": 0.0, "latency_ms": 0.0}
+            volume = command.get("volume_ml", 0.0)
+            volume = float(volume) if isinstance(volume, (int, float)) and not isinstance(volume, bool) else 0.0
             result = ValidationDecision(
                 command_id=str(command.get("command_id", "MISSING")),
                 category=category,
@@ -103,8 +111,17 @@ class GatewayValidator:
                 model_a_label=str(model.get("label", "NOT_CALLED")),
                 model_a_score=float(model.get("score", 0.0)),
                 model_a_latency_ms=float(model.get("latency_ms", 0.0)),
+                channel_id=str(command.get("channel_id", "")),
+                volume_ml=volume,
+                dose_mmol=round(dose_mmol, 6),
+                event_mmol_total=round(event_total, 6),
             )
-            self.audit_log.append(result.command_id, result.decision, result.reason_code, result.forwarded_to_actuator)
+            self.audit_log.append(
+                result.command_id, result.decision, result.reason_code, result.forwarded_to_actuator,
+                channel_id=result.channel_id, volume_ml=result.volume_ml, dose_mmol=result.dose_mmol,
+                event_mmol_total=result.event_mmol_total,
+                model_a_label=result.model_a_label, model_a_score=result.model_a_score,
+            )
             return result
 
         missing = [field for field in REQUIRED_FIELDS if field not in command]
@@ -160,6 +177,13 @@ class GatewayValidator:
         if dose_error:
             return finish("REJECT", "DOSE_LIMIT", dose_error)
 
+        event_id = str(command["event_id"])
+        dose_mmol = self.dose_mmol(command)
+        limit = self.config.max_recovery_mmol_per_event
+        if event_total + dose_mmol > limit + 1e-9:
+            return finish("REJECT", "EVENT_MMOL_LIMIT",
+                          f"{event_total:.3f} + {dose_mmol:.3f} mmol would exceed {limit:.0f} mmol for event {event_id}")
+
         model = self.model_a.predict(command, self.state)
         if model["latency_ms"] > self.config.model_a_timeout_ms:
             return finish("REJECT", "MODEL_A_TIMEOUT", "Model A response exceeded timeout", model=model)
@@ -180,7 +204,10 @@ class GatewayValidator:
         if command["action"] in DOSE_ACTIONS:           # only a dose starts a mixing period
             self.state.last_dose_accepted_at_s = now_s
             self.state.mixing_lockout_remaining_s = self.config.min_mixing_time_s
-        self.state.cumulative_recovery_mmol = float(command["recovery_mmol_after_command"])
+        if dose_mmol > 0.0:
+            event_total += dose_mmol
+            self.event_mmol_used[event_id] = event_total
+            self.state.cumulative_recovery_mmol = event_total
 
         return finish(
             "ACCEPT",
@@ -190,11 +217,17 @@ class GatewayValidator:
             model=model,
         )
 
+    def dose_mmol(self, command: dict[str, Any]) -> float:
+        """mmol this command delivers: volume_ml x the channel's molarity. 0 for a HOLD."""
+        if command["action"] not in DOSE_ACTIONS:
+            return 0.0
+        return float(command["volume_ml"]) * self.config.channel_molarity[command["channel_id"]]
+
     @staticmethod
     def _first_type_error(command: dict[str, Any]) -> str | None:
         string_fields = (
             "session_id", "command_id", "event_id", "timestamp_utc", "nonce", "user_role", "action",
-            "reagent", "recovery_plan_hash", "client_cert_fingerprint", "hmac_sha256",
+            "channel_id", "recovery_plan_hash", "client_cert_fingerprint", "hmac_sha256",
         )
         for field in string_fields:
             if not isinstance(command.get(field), str):
@@ -203,22 +236,29 @@ class GatewayValidator:
             return "field 'schema_version' must be an integer"
         if not isinstance(command.get("sequence_number"), int):
             return "field 'sequence_number' must be an integer"
-        for field in ("volume_ml", "flow_ml_min", "mixing_time_s", "recovery_mmol_after_command"):
-            if not isinstance(command.get(field), (int, float)):
-                return f"field '{field}' must be numeric"
+        for field in ("volume_ml", "flow_ml_min", "mixing_time_s"):
+            value = command.get(field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                return f"field '{field}' must be a finite number"
         return None
 
     def _dose_limit_error(self, command: dict[str, Any]) -> str | None:
         if command["action"] not in {"DOSE", "RECOVERY_DOSE", "HOLD"}:
             return "action is not allowed"
-        if command["reagent"] not in {"acid", "base", "none"}:
-            return "reagent must be acid, base, or none"
+        channels = self.config.channel_molarity
+        if command["action"] in DOSE_ACTIONS:
+            if command["channel_id"] not in channels:
+                return f"channel_id must be one of {', '.join(sorted(channels))}"
+            if float(command["volume_ml"]) <= 0:
+                return "a dose must be more than 0 mL"
+        elif command["channel_id"] not in channels and command["channel_id"] != NO_CHANNEL:
+            return f"channel_id must be one of {', '.join(sorted(channels))} or {NO_CHANNEL}"
+        if float(command["volume_ml"]) < 0:
+            return "volume must not be negative"
         if float(command["volume_ml"]) > self.config.max_volume_ml:
             return f"volume {command['volume_ml']} mL exceeds {self.config.max_volume_ml} mL"
         if float(command["flow_ml_min"]) > self.config.max_flow_ml_min:
             return f"flow {command['flow_ml_min']} mL/min exceeds {self.config.max_flow_ml_min} mL/min"
         if command["action"] != "HOLD" and float(command["mixing_time_s"]) < self.config.min_mixing_time_s:
             return f"mixing time {command['mixing_time_s']} s is below {self.config.min_mixing_time_s} s"
-        if float(command["recovery_mmol_after_command"]) > self.config.max_recovery_mmol_per_event:
-            return f"recovery mmol {command['recovery_mmol_after_command']} exceeds {self.config.max_recovery_mmol_per_event} mmol"
         return None

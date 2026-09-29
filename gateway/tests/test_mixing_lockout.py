@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 from chemshield_gateway.config import GatewayConfig  # noqa: E402
 from chemshield_gateway.gateway_validator import GatewayValidator  # noqa: E402
+from chemshield_gateway.models import ProcessState  # noqa: E402
 from chemshield_gateway.security_test_runner import run_security_test  # noqa: E402
 from chemshield_gateway.test_data import ManualClock, make_command  # noqa: E402
 
@@ -48,7 +49,7 @@ def test_second_dose_waits_15_s():
 
 def test_hmi_six_back_to_back_doses():
     from hmi import app as hmi
-    hmi.gateway.clock = ManualClock(1000.0)
+    hmi.gateway = GatewayValidator(config=hmi.config, state=ProcessState(), clock=ManualClock(1000.0))
     results = [hmi.api_dose(hmi.DoseRequest(**_hmi_body(10.0))) for _ in range(6)]
     assert [r["decision"] for r in results] == ["ACCEPT"] + ["REJECT"] * 5, results
     assert all(r["reason_code"] == "MIXING_LOCKOUT" for r in results[1:])
@@ -59,7 +60,7 @@ def test_hmi_six_back_to_back_doses():
 
 
 def _hmi_body(volume_ml: float) -> dict:
-    return {"reagent": "base", "volume_ml": volume_ml}
+    return {"channel_id": "BASE_BULK", "volume_ml": volume_ml}
 
 
 def test_attack_runner_bursts_meet_a_real_lockout():
