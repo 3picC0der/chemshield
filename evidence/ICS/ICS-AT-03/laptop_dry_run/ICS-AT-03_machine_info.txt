@@ -1,0 +1,7 @@
+recorded_utc: 2026-09-29T23:04:56+00:00
+platform: macOS-26.0.1-arm64-arm-64bit
+machine: arm64
+processor: arm
+cpus: 8
+python: 3.12.12
+scikit-learn: 1.9.1
