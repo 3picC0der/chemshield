@@ -96,7 +96,7 @@ def run_event(sc, kind, rng, truth=None, par=P, ctx0=None, keep=False, max_steps
                 h = hold(rng, par) + (nread * par["t_read"] if kind != "pi" else 0.0)
             else:
                 h = max(par["t_mix"], rng.normal(par["t_mix"] + 0.8, par["sd_mix"]))
-            t += v / par["Q"] * 60 + h
+            t += v / par["dose_speed_ml_per_min"] * 60 + h
             pH_after = ph(n, V, CT=CT); pHs.append(pH_after)
             steps.append(dict(k=k, m=m, rng=rng_r, nhat=nhat, pump=p, v=v, u=v * C[p] * 1000,
                               n_before=n_before, pH_after=pH_after, t=t, chained=not last,

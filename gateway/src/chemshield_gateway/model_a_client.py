@@ -21,7 +21,8 @@ class FakeModelAClient:
     def predict(self, command: dict[str, Any], state: ProcessState) -> dict[str, Any]:
         start = time.perf_counter()
         volume = float(command.get("volume_ml", 0.0))
-        reagent = str(command.get("reagent", "none"))
+        channel = str(command.get("channel_id", "NONE"))
+        reagent = "base" if channel.startswith("BASE") else "acid" if channel.startswith("ACID") else "none"
         ph = float(state.ph)
 
         # Simple deterministic safety logic for integration tests.

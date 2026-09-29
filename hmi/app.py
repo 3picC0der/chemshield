@@ -23,8 +23,11 @@ state = ProcessState(ph=7.0, mode="NORMAL")
 gateway = GatewayValidator(config=config, state=state)
 
 
+HMI_EVENT_ID = "HMI-EVENT"   # every HMI dose counts against this one event's 50 mmol
+
+
 class DoseRequest(BaseModel):
-    reagent: str
+    channel_id: str = "BASE_BULK"
     volume_ml: float
     flow_ml_min: float = 300.0
     role: str = "operator"
@@ -59,7 +62,7 @@ def index() -> str:
   </div>
   <div class="card">
     <h2>Dose Request</h2>
-    <label>Reagent</label><select id="reagent"><option>base</option><option>acid</option><option>none</option></select><br>
+    <label>Channel</label><select id="channel"><option>BASE_BULK</option><option>BASE_FINE</option><option>ACID_BULK</option><option>ACID_FINE</option></select><br>
     <label>Volume mL</label><input id="volume" type="number" value="12" step="0.5"><br>
     <label>Flow mL/min</label><input id="flow" type="number" value="300"><br>
     <button onclick="sendDose()">Send to Gateway</button>
@@ -67,17 +70,17 @@ def index() -> str:
   </div>
   <div class="card">
     <h2>Audit Log</h2>
-    <table><thead><tr><th>#</th><th>Command</th><th>Decision</th><th>Reason</th><th>Forwarded</th></tr></thead><tbody id="audit"></tbody></table>
+    <table><thead><tr><th>#</th><th>Command</th><th>Channel</th><th>mmol</th><th>Decision</th><th>Reason</th><th>Forwarded</th></tr></thead><tbody id="audit"></tbody></table>
   </div>
 <script>
 async function refresh(){
   const s = await (await fetch('/api/state')).json();
-  document.getElementById('state').innerHTML = `pH: <b>${s.ph}</b> | Mode: <b>${s.mode}</b> | Heartbeat: <b>${s.heartbeat_healthy}</b> | Lockout: <b>${s.mixing_lockout_remaining_s}s</b> | Commands: <b>${s.audit_count}</b>`;
+  document.getElementById('state').innerHTML = `pH: <b>${s.ph}</b> | Mode: <b>${s.mode}</b> | Heartbeat: <b>${s.heartbeat_healthy}</b> | Lockout: <b>${s.mixing_lockout_remaining_s}s</b> | Event reagent: <b>${s.event_mmol_used} / 50 mmol</b> | Commands: <b>${s.audit_count}</b>`;
   const audit = await (await fetch('/api/audit')).json();
-  document.getElementById('audit').innerHTML = audit.records.slice(-15).reverse().map(r => `<tr><td>${r.index}</td><td>${r.command_id}</td><td>${r.decision}</td><td>${r.reason_code}</td><td>${r.forwarded_to_actuator}</td></tr>`).join('');
+  document.getElementById('audit').innerHTML = audit.records.slice(-15).reverse().map(r => `<tr><td>${r.index}</td><td>${r.command_id}</td><td>${r.channel_id}</td><td>${r.dose_mmol}</td><td>${r.decision}</td><td>${r.reason_code}</td><td>${r.forwarded_to_actuator}</td></tr>`).join('');
 }
 async function sendDose(){
-  const body = {reagent: document.getElementById('reagent').value, volume_ml: parseFloat(document.getElementById('volume').value), flow_ml_min: parseFloat(document.getElementById('flow').value)};
+  const body = {channel_id: document.getElementById('channel').value, volume_ml: parseFloat(document.getElementById('volume').value), flow_ml_min: parseFloat(document.getElementById('flow').value)};
   const r = await (await fetch('/api/dose', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})).json();
   const cls = r.decision === 'ACCEPT' ? 'ok' : 'bad';
   document.getElementById('decision').innerHTML = `<span class="${cls}">${r.decision}</span> | ${r.reason_code} | Model A: ${r.model_a_label} (${r.model_a_latency_ms} ms) | Forwarded: ${r.forwarded_to_actuator}`;
@@ -98,7 +101,8 @@ def api_state() -> dict:
         "ph": gateway.state.ph,
         "mode": gateway.state.mode,
         "heartbeat_healthy": gateway.state.heartbeat_healthy,
-        "mixing_lockout_remaining_s": gateway.state.mixing_lockout_remaining_s,
+        "mixing_lockout_remaining_s": round(gateway.lockout_remaining_s(), 1),
+        "event_mmol_used": round(gateway.event_mmol_used.get(HMI_EVENT_ID, 0.0), 3),
         "audit_count": len(gateway.audit_log.records),
     }
 
@@ -110,16 +114,15 @@ def api_dose(req: DoseRequest) -> dict:
     command = make_command(
         config,
         command_id=f"HMI-{uuid4().hex[:8]}",
-        event_id="HMI-EVENT",
+        event_id=HMI_EVENT_ID,
         timestamp_utc=now,
         nonce=f"HMI-NONCE-{uuid4().hex}",
         sequence_number=seq,
         user_role=req.role,
-        reagent=req.reagent,
+        channel_id=req.channel_id,
         volume_ml=req.volume_ml,
         flow_ml_min=req.flow_ml_min,
-        recovery_mmol_after_command=min(50.0, gateway.state.cumulative_recovery_mmol + req.volume_ml),
-    )
+    )                           # no mmol from here: the gateway computes it from channel_id
     result = gateway.validate(command, category="hmi_manual", received_at_utc=now)
     return result.to_dict()
 
@@ -138,6 +141,5 @@ def api_halt() -> dict:
 
 @app.post("/api/ack")
 def api_ack() -> dict:
-    gateway.manual_ack_new_session()
-    gateway.state.mixing_lockout_remaining_s = 0.0
+    gateway.manual_ack_new_session()      # ACK does not cut the mixing lockout short
     return {"mode": gateway.state.mode}

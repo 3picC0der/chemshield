@@ -7,6 +7,19 @@ from .auth import attach_hmac
 from .config import GatewayConfig
 
 
+class ManualClock:
+    """A gateway clock the tests move by hand (seconds)."""
+
+    def __init__(self, t: float = 0.0) -> None:
+        self.t = float(t)
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, seconds: float) -> None:
+        self.t += float(seconds)
+
+
 def iso(ts: datetime) -> str:
     return ts.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -22,11 +35,10 @@ def unsigned_command(
     session_id: str | None = None,
     user_role: str = "operator",
     action: str = "RECOVERY_DOSE",
-    reagent: str = "base",
+    channel_id: str = "BASE_BULK",
     volume_ml: float = 12.0,
     flow_ml_min: float = 300.0,
     mixing_time_s: float = 15.0,
-    recovery_mmol_after_command: float = 12.0,
     recovery_plan_hash: str = "sha256:demo_recovery_plan_v1",
     client_cert_fingerprint: str | None = None,
 ) -> dict[str, Any]:
@@ -40,11 +52,10 @@ def unsigned_command(
         "sequence_number": sequence_number,
         "user_role": user_role,
         "action": action,
-        "reagent": reagent,
+        "channel_id": channel_id,
         "volume_ml": volume_ml,
         "flow_ml_min": flow_ml_min,
         "mixing_time_s": mixing_time_s,
-        "recovery_mmol_after_command": recovery_mmol_after_command,
         "recovery_plan_hash": recovery_plan_hash,
         "client_cert_fingerprint": client_cert_fingerprint or config.expected_client_cert_fingerprint,
     }
@@ -63,9 +74,8 @@ def generate_attack_categories(config: GatewayConfig, now: datetime, per_categor
             timestamp_utc=now,
             nonce=f"N-VALID-{i:04d}",
             sequence_number=i,
-            reagent="base" if i % 2 else "acid",
+            channel_id="BASE_BULK" if i % 2 else "ACID_BULK",
             volume_ml=10.0 + (i % 4),
-            recovery_mmol_after_command=10.0 + (i % 4),
         )
 
     for i in range(1, per_category + 1):
@@ -76,9 +86,8 @@ def generate_attack_categories(config: GatewayConfig, now: datetime, per_categor
             timestamp_utc=now,
             nonce=f"N-VALID-{i:04d}",
             sequence_number=i,
-            reagent="base" if i % 2 else "acid",
+            channel_id="BASE_BULK" if i % 2 else "ACID_BULK",
             volume_ml=10.0 + (i % 4),
-            recovery_mmol_after_command=10.0 + (i % 4),
         )
 
     for i in range(1, per_category + 1):
@@ -144,7 +153,6 @@ def generate_attack_categories(config: GatewayConfig, now: datetime, per_categor
             nonce=f"N-OVERSIZE-{i:04d}",
             sequence_number=per_category + i,
             volume_ml=25.0,
-            recovery_mmol_after_command=25.0,
         )
 
     for i in range(1, per_category + 1):

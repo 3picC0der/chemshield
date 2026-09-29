@@ -8,11 +8,10 @@
   "sequence_number": 1,
   "user_role": "operator",
   "action": "RECOVERY_DOSE",
-  "reagent": "base",
+  "channel_id": "BASE_BULK",
   "volume_ml": 12.0,
   "flow_ml_min": 300.0,
   "mixing_time_s": 15.0,
-  "recovery_mmol_after_command": 12.0,
   "recovery_plan_hash": "sha256:demo_recovery_plan_v1",
   "client_cert_fingerprint": "CERT-KHALID-DEMO",
   "hmac_sha256": "calculated_at_runtime_by_auth.py"

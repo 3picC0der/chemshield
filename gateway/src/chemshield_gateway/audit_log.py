@@ -16,6 +16,12 @@ class AuditRecord:
     decision: str
     reason_code: str
     forwarded_to_actuator: bool
+    channel_id: str
+    volume_ml: float
+    dose_mmol: float
+    event_mmol_total: float
+    model_a_label: str
+    model_a_score: float
     previous_hash: str
     record_hash: str
 
@@ -31,7 +37,20 @@ class HashChainedAuditLog:
         self.records: list[AuditRecord] = []
         self._last_hash = "GENESIS"
 
-    def append(self, command_id: str, decision: str, reason_code: str, forwarded_to_actuator: bool) -> AuditRecord:
+    def append(
+        self,
+        command_id: str,
+        decision: str,
+        reason_code: str,
+        forwarded_to_actuator: bool,
+        *,
+        channel_id: str = "",
+        volume_ml: float = 0.0,
+        dose_mmol: float = 0.0,
+        event_mmol_total: float = 0.0,
+        model_a_label: str = "NOT_CALLED",
+        model_a_score: float = 0.0,
+    ) -> AuditRecord:
         payload = {
             "index": len(self.records) + 1,
             "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -39,6 +58,12 @@ class HashChainedAuditLog:
             "decision": decision,
             "reason_code": reason_code,
             "forwarded_to_actuator": forwarded_to_actuator,
+            "channel_id": channel_id,
+            "volume_ml": volume_ml,
+            "dose_mmol": dose_mmol,
+            "event_mmol_total": event_mmol_total,
+            "model_a_label": model_a_label,
+            "model_a_score": model_a_score,
             "previous_hash": self._last_hash,
         }
         record_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()

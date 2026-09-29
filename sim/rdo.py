@@ -43,7 +43,7 @@ def build(pH_m, V_hat, ctx, par=P, T=25.0, H=None):
     usable = np.maximum(inv - res, 0.0)
     ucap = np.minimum(par["v_max"], par["G_v"])
     avail = np.where(usable < par["v_min"], 0.0, avail)
-    tq = 60.0 / par["Q"]; tm = par["t_mix"]; tr = par["t_hold"] - par["t_mix"]
+    tq = 60.0 / par["dose_speed_ml_per_min"]; tm = par["t_mix"]; tr = par["t_hold"] - par["t_mix"]
 
     rows, rhs, names = [], [], []
     def add(r, b, nm): rows.append(r); rhs.append(b); names.append(nm)
@@ -127,7 +127,7 @@ def solve(pH_m, V_hat, ctx=None, par=P, T=25.0, H=None):
     status = "DOSE" if doses else ("ESCALATE" if z / meta["S"] > worth else ("RE-READ" if z > 1e-9 else "HOLD"))
     forecast = None
     if doses:                                            # can the recovery still finish in time?
-        mt = meta; tq = 60.0 / par["Q"]
+        mt = meta; tq = 60.0 / par["dose_speed_ml_per_min"]
         prog = sum(M[p] * (v * (1 - par["eps_p"]) - par["e_abs"]) for p, v in doses)
         remain = max(mt["nU"] - mt["Nhi"], mt["Nlo"] - mt["nL"])
         blk = sum(tq * v + par["t_mix"] for p, v in doses) + (par["t_hold"] - par["t_mix"])

@@ -26,6 +26,13 @@ Open:
 http://127.0.0.1:8000
 ```
 
+On the Raspberry Pi, serve it on the port the firewall opens
+(`gateway/firewall/raspberry_pi_firewall_template.sh` reads the same variable):
+
+```bash
+uvicorn hmi.app:app --host 0.0.0.0 --port "${CHEMSHIELD_HMI_PORT:-8000}"
+```
+
 This HMI uses the gateway package in `gateway/src`. It is a demo HMI and can be connected later to the final simulator/Model A/Uno bridge.
 
 ## Design

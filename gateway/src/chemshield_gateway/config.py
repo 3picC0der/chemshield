@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+# Bottle strength per channel, mol/L == mmol/mL. The same four bottles as Hattan's
+# redosing.planner.CHANNEL_MOLARITY; a dose is volume_ml x molarity mmol.
+CHANNEL_MOLARITY: dict[str, float] = {
+    "BASE_BULK": 0.5,     # 0.5 M NaOH
+    "BASE_FINE": 0.005,   # 0.005 M NaOH
+    "ACID_BULK": 0.5,     # 0.5 M HCl
+    "ACID_FINE": 0.005,   # 0.005 M HCl
+}
+NO_CHANNEL = "NONE"       # for HOLD commands only
 
 
 @dataclass(frozen=True)
@@ -21,6 +31,7 @@ class GatewayConfig:
     max_flow_ml_min: float = 500.0
     min_mixing_time_s: float = 15.0
     max_recovery_mmol_per_event: float = 50.0
+    channel_molarity: dict[str, float] = field(default_factory=lambda: dict(CHANNEL_MOLARITY))
 
     heartbeat_timeout_s: float = 1.0
     safe_hold_deadline_s: float = 2.0

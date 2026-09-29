@@ -6,8 +6,8 @@ This folder contains Khalid's ChemShield ICS implementation.
 
 - **C2:** every actuator command must pass through the ChemShield gateway.
 - **S3:** replayed and stale commands are rejected.
-- **S2 support:** dose volume and mixing-time rules are enforced by software.
-- **C3 support:** recovery-event mmol limit is checked before forwarding.
+- **S2 support:** dose volume is capped at 20 mL, and no command is accepted until 15 s after the last accepted dose (`MIXING_LOCKOUT`, timed on the gateway's own clock).
+- **C3 support:** the gateway computes each dose's mmol itself (`volume_ml` × the molarity of the `channel_id` bottle) and rejects any dose that would take its event past 50 mmol (`EVENT_MMOL_LIMIT`).
 - **S4 support:** the gateway calls a Model A decision interface.
 - **INT-S1 support:** the gateway records recovery-mode timing.
 

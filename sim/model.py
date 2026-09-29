@@ -5,12 +5,19 @@ import numpy as np
 from scipy.optimize import brentq
 
 # ------------------------------------------------------------------ parameters
+# How fast a dose goes into the tank, mL/min. 300 is the operating rate of the old
+# KPHM400 peristaltic pump (~400 mL/min max). The team doses by hand syringe now:
+# replace this with the measured hand-syringe speed. It sets how long every dose takes
+# in the batch, the live tank and the optimiser's time budget. S6 depends on it (on the
+# pure-water table: 87.5 % at 65 mL/min, 96 % at 80, 99.7 % at 100, 100 % at 120+).
+DOSE_SPEED_ML_PER_MIN = 300.0
+
 P = dict(
     V0=5.0,            # L   working fill in the 10 L vessel (BOM item 1)
     V_hi=5.5,          # L   high-level interlock setpoint used as a tank constraint
     v_min=0.5,         # mL  metering floor per dose (to be confirmed by test T2)
     v_max=20.0,        # mL  dose cap (S2)
-    Q=300.0,           # mL/min operating pump rate (KPHM400 ~400 mL/min max; S7)
+    dose_speed_ml_per_min=DOSE_SPEED_ML_PER_MIN,   # see above; override per run with make_par()
     t_mix=15.0, t_settle=5.0, t_read=2.0, n_read=3, t_detect=2.0,
     sd_mix=1.2, sd_settle=1.5, p_reread=0.12,
     t_hold=26.0,       # s   nominal hold + settle + 3 reads, used inside the optimiser

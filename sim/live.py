@@ -74,7 +74,8 @@ class Tank:
         return ch.ph_from_excess(self.excess_mmol, self.temp_c, self.volume_L)
 
     def step(self, dt: float) -> None:
-        # deliver any dose still running (a 20 mL dose at 300 mL/min takes 4 s)
+        # deliver any dose still running (a 20 mL dose at 300 mL/min takes 4 s;
+        # the speed is model.DOSE_SPEED_ML_PER_MIN)
         rest = []
         for left, rate in self.pending:
             take = min(dt, left)
@@ -92,7 +93,7 @@ class Tank:
             return {"ok": False, "error": f"unknown channel {channel_id}"}
         ml = float(dose_ml) * (1.0 + self.pump_bias)
         mmol = CHANNEL_MOLARITY[channel_id] * ml * CHANNEL_SIGN[channel_id]
-        secs = max(0.5, ml / (P["Q"] / 60.0))
+        secs = max(0.5, ml / (P["dose_speed_ml_per_min"] / 60.0))
         self.pending.append((secs, mmol / secs))
         self.volume_L += ml / 1000.0
         self.event_mmol_used += abs(CHANNEL_MOLARITY[channel_id] * ml)

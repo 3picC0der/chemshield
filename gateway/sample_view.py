@@ -33,7 +33,7 @@ def main() -> None:
     stale = make_command(config, command_id="SAMPLE-STALE-001", event_id="EVT-SAMPLE", timestamp_utc=now - timedelta(seconds=45), nonce="NONCE-SAMPLE-STALE", sequence_number=2)
     show("Stale command", gateway.validate(stale, category="sample", received_at_utc=now))
 
-    oversize = make_command(config, command_id="SAMPLE-OVERSIZE-001", event_id="EVT-SAMPLE", timestamp_utc=now, nonce="NONCE-SAMPLE-OVERSIZE", sequence_number=2, volume_ml=25.0, recovery_mmol_after_command=25.0)
+    oversize = make_command(config, command_id="SAMPLE-OVERSIZE-001", event_id="EVT-SAMPLE", timestamp_utc=now, nonce="NONCE-SAMPLE-OVERSIZE", sequence_number=2, volume_ml=25.0)
     show("Oversize 25 mL", gateway.validate(oversize, category="sample", received_at_utc=now))
 
     bypass_ok = gateway.actuator.direct_write_attempt("SAMPLE-BYPASS-001")
