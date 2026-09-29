@@ -29,7 +29,7 @@
         "pass_fail": "PASS"
       }
     ],
-    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/c2_gateway_only_path_results.csv",
+    "raw_csv": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/raw/c2_gateway_only_path_results.csv",
     "pass_fail": "PASS",
     "target": "Only gateway-forwarded commands reach the actuator; direct bypass attempts fail."
   },
@@ -41,12 +41,12 @@
     "valid_command_acceptance_rate_percent": 100.0,
     "malicious_commands_reaching_actuator": 0,
     "audit_log_hash_chain_valid": true,
-    "median_latency_ms": 0.014,
-    "p95_latency_ms": 0.0215,
-    "max_latency_ms": 4.96,
-    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/security_test_commands.csv",
-    "summary_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/reports/security_test_summary.csv",
-    "audit_jsonl": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/hash_chained_audit_log.jsonl",
+    "median_latency_ms": 0.0145,
+    "p95_latency_ms": 0.0205,
+    "max_latency_ms": 0.8953,
+    "raw_csv": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/raw/security_test_commands.csv",
+    "summary_csv": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/reports/security_test_summary.csv",
+    "audit_jsonl": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/raw/hash_chained_audit_log.jsonl",
     "category_results": [
       {
         "category": "valid",
@@ -206,18 +206,18 @@
         "pass_fail": "PASS"
       }
     ],
-    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/failsafe_results.csv",
+    "raw_csv": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/raw/failsafe_results.csv",
     "pass_fail": "PASS"
   },
   "int_s1": {
     "events_count": 100,
-    "max_elapsed_s": 0.1019,
-    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/int_s1_recovery_timing.csv",
+    "max_elapsed_s": 0.0835,
+    "raw_csv": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/raw/int_s1_recovery_timing.csv",
     "pass_fail": "PASS"
   },
   "artifacts": {
-    "security_plot": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/plots/security_test_summary.png",
-    "failsafe_plot": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/plots/failsafe_summary.png",
-    "network_diagram": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/plots/network_trust_boundary_diagram.png"
+    "security_plot": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/plots/security_test_summary.png",
+    "failsafe_plot": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/plots/failsafe_summary.png",
+    "network_diagram": "/Users/mac/Development/Personal/chemshield-fixes/evidence/generated/plots/network_trust_boundary_diagram.png"
   }
 }
