@@ -7,6 +7,19 @@ from .auth import attach_hmac
 from .config import GatewayConfig
 
 
+class ManualClock:
+    """A gateway clock the tests move by hand (seconds)."""
+
+    def __init__(self, t: float = 0.0) -> None:
+        self.t = float(t)
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, seconds: float) -> None:
+        self.t += float(seconds)
+
+
 def iso(ts: datetime) -> str:
     return ts.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 

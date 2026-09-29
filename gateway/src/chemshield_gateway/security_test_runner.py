@@ -12,7 +12,7 @@ from .config import GatewayConfig
 from .gateway_validator import GatewayValidator
 from .models import ProcessState, ValidationDecision
 from .simulated_actuator import SimulatedActuator
-from .test_data import generate_attack_categories
+from .test_data import ManualClock, generate_attack_categories
 
 
 CATEGORY_ORDER = [
@@ -45,8 +45,10 @@ def run_security_test(output_dir: Path, per_category: int = 1000) -> dict[str, A
     config = GatewayConfig()
     actuator = SimulatedActuator()
     state = ProcessState()
-    gateway = GatewayValidator(config=config, actuator=actuator, state=state)
+    clock = ManualClock()
+    gateway = GatewayValidator(config=config, actuator=actuator, state=state, clock=clock)
     now = datetime.now(timezone.utc)
+    burst_i = 0
 
     rows: list[ValidationDecision] = []
     reboot_done = False
@@ -68,15 +70,19 @@ def run_security_test(output_dir: Path, per_category: int = 1000) -> dict[str, A
                 latency_ms=round((time.perf_counter() - started) * 1000.0, 4),
             )
         else:
-            if category == "burst_during_lockout":
+            if category == "valid":
+                # valid doses are paced like a real recovery: one per mixing period
+                clock.advance(config.min_mixing_time_s)
+            elif category == "burst_during_lockout":
+                # the whole burst lands 1 s to (lockout - 1) s after the last accepted dose
                 gateway.manual_ack_new_session()
-                gateway.state.mixing_lockout_remaining_s = 10.0
+                span = config.min_mixing_time_s - 2.0
+                clock.t = gateway.state.last_dose_accepted_at_s + 1.0 + span * burst_i / per_category
+                burst_i += 1
             elif category in {"bad_certificate"}:
                 gateway.manual_ack_new_session()
-                gateway.state.mixing_lockout_remaining_s = 0.0
+                clock.advance(config.min_mixing_time_s)
             decision = gateway.validate(command, category=category, received_at_utc=now)
-            if category == "burst_during_lockout":
-                gateway.state.mixing_lockout_remaining_s = 0.0
         rows.append(decision)
 
     raw_csv = raw_dir / "security_test_commands.csv"

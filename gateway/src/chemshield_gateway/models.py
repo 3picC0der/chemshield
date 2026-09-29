@@ -26,7 +26,8 @@ class ProcessState:
     ph: float = 7.0
     mode: str = "NORMAL"  # NORMAL, RECOVERY, SAFE_HOLD
     heartbeat_healthy: bool = True
-    mixing_lockout_remaining_s: float = 0.0
+    mixing_lockout_remaining_s: float = 0.0  # derived by the gateway from the fields below, for display
+    last_dose_accepted_at_s: float | None = None  # gateway clock reading when the last dose was accepted
     cumulative_recovery_mmol: float = 0.0
     level_ok: bool = True
 

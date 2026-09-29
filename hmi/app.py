@@ -98,7 +98,7 @@ def api_state() -> dict:
         "ph": gateway.state.ph,
         "mode": gateway.state.mode,
         "heartbeat_healthy": gateway.state.heartbeat_healthy,
-        "mixing_lockout_remaining_s": gateway.state.mixing_lockout_remaining_s,
+        "mixing_lockout_remaining_s": round(gateway.lockout_remaining_s(), 1),
         "audit_count": len(gateway.audit_log.records),
     }
 
@@ -138,6 +138,5 @@ def api_halt() -> dict:
 
 @app.post("/api/ack")
 def api_ack() -> dict:
-    gateway.manual_ack_new_session()
-    gateway.state.mixing_lockout_remaining_s = 0.0
+    gateway.manual_ack_new_session()      # ACK does not cut the mixing lockout short
     return {"mode": gateway.state.mode}

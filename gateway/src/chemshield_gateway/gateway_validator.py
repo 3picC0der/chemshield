@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import time
-from typing import Any
+from typing import Any, Callable
 
 from .audit_log import HashChainedAuditLog
 from .auth import is_valid_hmac
@@ -32,6 +32,8 @@ REQUIRED_FIELDS: tuple[str, ...] = (
     "hmac_sha256",
 )
 
+DOSE_ACTIONS: tuple[str, ...] = ("DOSE", "RECOVERY_DOSE")
+
 
 class GatewayValidator:
     """ChemShield command gateway.
@@ -48,8 +50,11 @@ class GatewayValidator:
         model_a: FakeModelAClient | None = None,
         audit_log: HashChainedAuditLog | None = None,
         state: ProcessState | None = None,
+        clock: Callable[[], float] | None = None,
     ) -> None:
         self.config = config or GatewayConfig()
+        # seconds, monotonic; the mixing lockout is timed on this. Tests pass their own.
+        self.clock = clock or time.monotonic
         self.actuator = actuator or SimulatedActuator()
         self.model_a = model_a or FakeModelAClient(self.config)
         self.audit_log = audit_log or HashChainedAuditLog()
@@ -71,6 +76,15 @@ class GatewayValidator:
     def manual_ack_new_session(self) -> None:
         self.state.mode = "NORMAL"
         self.state.heartbeat_healthy = True
+
+    def lockout_remaining_s(self, now_s: float | None = None) -> float:
+        """Seconds until the next dose may be accepted: min_mixing_time_s after the last
+        accepted dose. Also written to state.mixing_lockout_remaining_s for display."""
+        last = self.state.last_dose_accepted_at_s
+        now_s = self.clock() if now_s is None else now_s
+        remaining = 0.0 if last is None else max(0.0, self.config.min_mixing_time_s - (now_s - last))
+        self.state.mixing_lockout_remaining_s = round(remaining, 3)
+        return remaining
 
     def validate(self, command: dict[str, Any], *, category: str = "manual", received_at_utc: datetime | None = None) -> ValidationDecision:
         started = time.perf_counter()
@@ -138,7 +152,8 @@ class GatewayValidator:
             return finish("REJECT", "SAFE_HOLD_ACTIVE", "gateway is in SAFE_HOLD")
         if not self.state.heartbeat_healthy:
             return finish("REJECT", "HEARTBEAT_LOSS", "heartbeat from Uno/actuator is not healthy")
-        if self.state.mixing_lockout_remaining_s > 0:
+        now_s = self.clock()
+        if self.lockout_remaining_s(now_s) > 0:
             return finish("REJECT", "MIXING_LOCKOUT", f"{self.state.mixing_lockout_remaining_s:.1f}s remains before next dose")
 
         dose_error = self._dose_limit_error(command)
@@ -162,6 +177,9 @@ class GatewayValidator:
         self.persisted_command_ids.add(command_id)
         self.last_sequence_number = sequence_number
         self.actuator.forward_from_gateway(command_id)
+        if command["action"] in DOSE_ACTIONS:           # only a dose starts a mixing period
+            self.state.last_dose_accepted_at_s = now_s
+            self.state.mixing_lockout_remaining_s = self.config.min_mixing_time_s
         self.state.cumulative_recovery_mmol = float(command["recovery_mmol_after_command"])
 
         return finish(
