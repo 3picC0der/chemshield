@@ -12,8 +12,9 @@ returns, with the Model A class and score in the decision and the audit record w
 
 Test-harness only (written on the ICS-AT-03 sheet): before each request the harness
   * gives Model A 5 fresh probe readings for the scenario (as the serial bridge would);
-  * resets the gateway's 15 s mixing lockout and per-event mmol counter, which would
-    otherwise reject 999 of 1,000 back-to-back requests before Model A is called.
+  * clears the gateway's 15 s mixing lockout (state.last_dose_accepted_at_s) and gives
+    each request its own event id, because otherwise the lockout and the 50 mmol per-event
+    limit would reject most of 1,000 back-to-back requests before Model A is called.
 
 Scenarios: normal (small correction near pH 7), harmful (big wrong-way dose), recovery
 (correct dose in an acid tank) and uncertain (USB pulled: readings 4 s old).
@@ -56,8 +57,7 @@ SCENARIOS = {                  # weight, tank pH, (bottle, mL range), readings a
 }
 
 # gateway attributes that hold "a dose was just accepted" state; reset between requests
-LOCKOUT_ATTRS = ("last_accepted_monotonic", "last_accept_time", "last_dose_time", "last_dose_monotonic",
-                 "_last_dose_t", "_last_accept_t")
+LOCKOUT_ATTRS = ("last_dose_accepted_at_s",)
 
 
 def load_gateway(src: Path):
@@ -76,20 +76,18 @@ def make_signed_command(config, test_data, auth, i: int, channel_id: str, dose_m
     molarity, direction = CHANNELS[channel_id]
     wanted = {
         "command_id": f"LAT-{i:05d}-{uuid.uuid4().hex[:6]}",
-        "event_id": "EVT-LATENCY",
+        "event_id": f"EVT-LAT-{i:05d}",
         "timestamp_utc": datetime.now(timezone.utc),
         "nonce": uuid.uuid4().hex,
         "sequence_number": i,
         "channel_id": channel_id,
-        "dose_ml": dose_ml,
-        "reagent": "acid" if direction > 0 else "base",   # older command format
         "volume_ml": dose_ml,
-        "recovery_mmol_after_command": round(molarity * dose_ml, 4),
+        "reagent": "acid" if direction > 0 else "base",                   # gateway before 002041d
+        "recovery_mmol_after_command": round(molarity * dose_ml, 4),      # gateway before 002041d
     }
     accepted = inspect.signature(test_data.unsigned_command).parameters
     cmd = test_data.unsigned_command(config, **{k: v for k, v in wanted.items() if k in accepted})
     cmd.setdefault("channel_id", channel_id)
-    cmd.setdefault("dose_ml", dose_ml)
     return auth.attach_hmac(cmd, config.hmac_secret)
 
 
@@ -103,6 +101,8 @@ def reset_gateway(validator) -> None:
         for name in LOCKOUT_ATTRS:
             if hasattr(obj, name):
                 setattr(obj, name, None)
+    if isinstance(getattr(validator, "event_mmol_used", None), dict):
+        validator.event_mmol_used.clear()
 
 
 def fresh_context(tank_ph: float, age_s: float, rng) -> ProcessContext:

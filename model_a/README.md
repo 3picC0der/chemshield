@@ -59,7 +59,7 @@ model_a.dose_added(command["command_id"])
 context.reset_tank(5.0)
 ```
 
-Model A needs **`channel_id`** in each command (`ACID_BULK`, `ACID_FINE`, `BASE_BULK`, `BASE_FINE`), as in I1. Without it the answer is UNCERTAIN, because 20 mL of 0.5 M is 100 times 20 mL of 0.005 M. It also accepts `dose_ml` or the older `volume_ml`.
+Model A needs **`channel_id`** in each command (`ACID_BULK`, `ACID_FINE`, `BASE_BULK`, `BASE_FINE`), as in I1. Without it the answer is UNCERTAIN, because 20 mL of 0.5 M is 100 times 20 mL of 0.005 M. It judges the dose in `volume_ml`, the field the gateway checks, and falls back to I1's `dose_ml` only when `volume_ml` is missing.
 
 ## Where the inputs come from
 

@@ -272,7 +272,8 @@ class ModelAClient:
         start = time.perf_counter()
         command_id = str(command.get("command_id", ""))
         channel_id = command.get("channel_id")
-        dose_ml = command.get("dose_ml", command.get("volume_ml"))
+        # The gateway checks volume_ml, so judge exactly that dose; I1's dose_ml only if it's absent.
+        dose_ml = command["volume_ml"] if "volume_ml" in command else command.get("dose_ml")
         feats = None
         if self.model is None:
             decision = {"label": UNCERTAIN, "score": 1.0, "reason": "MODEL_UNAVAILABLE"}

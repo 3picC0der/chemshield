@@ -226,6 +226,47 @@ def test_dose_added_feeds_the_dose_log():
     assert len(log) == 1 and log[0]["channel_id"] == "BASE_BULK" and log[0]["predicted_post_ph"] is not None
 
 
+def test_judges_the_same_dose_the_gateway_checks():
+    ctx = ProcessContext()
+    client = _client(context=ctx)
+    now = ctx.clock()
+    for i in range(5):
+        ctx.add_sample(6.2, t=now - 4.2 + i)
+    # a client that sends a harmless dose_ml next to a big volume_ml must not fool Model A
+    out = client.predict({"command_id": "v1", "channel_id": "ACID_BULK", "volume_ml": 20.0, "dose_ml": 0.5}, None)
+    assert out["label"] == HARMFUL, out
+
+
+def test_through_khalids_gateway():
+    import sys
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[2] / "gateway" / "src"
+    if not (src / "chemshield_gateway").is_dir():
+        raise unittest.SkipTest("Khalid's gateway is not in gateway/src")
+    sys.path.insert(0, str(src))
+    from chemshield_gateway import auth, test_data
+    from chemshield_gateway.config import GatewayConfig
+    from chemshield_gateway.gateway_validator import GatewayValidator
+    from model_a.latency_test import make_signed_command
+
+    ctx = ProcessContext()
+    client = _client(context=ctx)
+    now = ctx.clock()
+    for i in range(5):
+        ctx.add_sample(3.5, t=now - 4.2 + i)                   # acid tank after an upset
+    config = GatewayConfig()
+    gateway = GatewayValidator(config=config, model_a=client)
+    wrong_way = gateway.validate(make_signed_command(config, test_data, auth, 1, "ACID_BULK", 10.0))
+    assert wrong_way.decision == "REJECT" and wrong_way.reason_code == "MODEL_A_BLOCK", wrong_way
+    assert wrong_way.model_a_label == HARMFUL
+    recovery = gateway.validate(make_signed_command(config, test_data, auth, 2, "BASE_FINE", 5.0))
+    assert recovery.decision == "ACCEPT" and recovery.model_a_label == ACCEPTABLE, recovery
+    assert client.dose_added(recovery.command_id)
+    too_soon = gateway.validate(make_signed_command(config, test_data, auth, 3, "BASE_FINE", 5.0))
+    assert too_soon.reason_code == "MIXING_LOCKOUT", too_soon       # never reaches Model A
+
+
 # ------------------------------------------------------------------ the generator
 def test_generator_smoke():
     from model_a import generate as G
