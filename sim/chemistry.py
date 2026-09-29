@@ -16,6 +16,7 @@ import os
 import warnings
 
 import numpy as np
+from scipy.optimize import brentq
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TABLE_DIR = os.path.join(HERE, "aspen_tables")
@@ -126,6 +127,18 @@ def table_files() -> list[str]:
 
 
 # ------------------------------------------------------------------- the model
+def _bracket(temps: np.ndarray, temp_c: float) -> tuple[float, float, float]:
+    """The two table temperatures around temp_c and the blend weight of the upper one.
+    Outside the table's range the nearest end is used on its own (w = 0)."""
+    if len(temps) == 1 or temp_c <= temps[0]:
+        return temps[0], temps[0], 0.0
+    if temp_c >= temps[-1]:
+        return temps[-1], temps[-1], 0.0
+    i = int(np.searchsorted(temps, temp_c))
+    t_lo, t_hi = temps[i - 1], temps[i]
+    return t_lo, t_hi, (temp_c - t_lo) / (t_hi - t_lo)
+
+
 def ph_from_excess(excess_mmol: float, temp_c: float = 25.0,
                    volume_L: float = BASIS_L) -> float:
     """pH of the tank.
@@ -136,17 +149,7 @@ def ph_from_excess(excess_mmol: float, temp_c: float = 25.0,
     """
     d = _load()
     x = float(excess_mmol) * BASIS_L / float(volume_L)
-    temps = d["temps"]
-    if len(temps) == 1 or temp_c <= temps[0]:
-        t_lo = t_hi = temps[0] if len(temps) == 1 or temp_c <= temps[0] else temps[-1]
-        w = 0.0
-    elif temp_c >= temps[-1]:
-        t_lo = t_hi = temps[-1]
-        w = 0.0
-    else:
-        i = int(np.searchsorted(temps, temp_c))
-        t_lo, t_hi = temps[i - 1], temps[i]
-        w = (temp_c - t_lo) / (t_hi - t_lo)
+    t_lo, t_hi, w = _bracket(d["temps"], temp_c)
     e_lo, _p_lo, c_lo = d["tables"][t_lo]
     lo = _ph_of_c(float(np.interp(x, e_lo, c_lo)), t_lo)
     if w == 0.0:
@@ -158,16 +161,32 @@ def ph_from_excess(excess_mmol: float, temp_c: float = 25.0,
 
 def excess_from_ph(ph_value: float, temp_c: float = 25.0,
                    volume_L: float = BASIS_L) -> float:
-    """Inverse lookup: the excess (base-positive mmol) that gives this pH."""
+    """Inverse lookup: the excess (base-positive mmol) that gives this pH.
+
+    The exact inverse of ph_from_excess() at the same temperature and fill, so the
+    optimiser's reading of a pH and the simulated tank agree."""
     d = _load()
-    temps = d["temps"]
-    t = float(temps[int(np.argmin(np.abs(temps - temp_c)))])
-    e, _p, c = d["tables"][t]
-    # invert in c-space for the same reason the forward lookup uses it: c is linear in
-    # excess, pH is not. c descends as excess rises, so flip for np.interp.
-    h = 10.0 ** (-float(ph_value))
-    c_target = h - _kw(t) / h
-    return float(np.interp(c_target, c[::-1], e[::-1])) * float(volume_L) / BASIS_L
+    t_lo, t_hi, w = _bracket(d["temps"], temp_c)
+    e, _p, c = d["tables"][t_lo]
+    if w == 0.0:
+        # invert in c-space for the same reason the forward lookup uses it: c is linear
+        # in excess, pH is not. c descends as excess rises, so flip for np.interp.
+        h = 10.0 ** (-float(ph_value))
+        c_target = h - _kw(t_lo) / h
+        x = float(np.interp(c_target, c[::-1], e[::-1]))
+    else:
+        # between two table temperatures the forward lookup blends their pH, so invert
+        # that blend numerically; it is monotone in excess, so the root is unique
+        lo_x = max(e[0], d["tables"][t_hi][0][0])
+        hi_x = min(e[-1], d["tables"][t_hi][0][-1])
+        f = lambda xx: ph_from_excess(xx, temp_c) - float(ph_value)  # noqa: E731
+        if f(lo_x) >= 0.0:
+            x = lo_x
+        elif f(hi_x) <= 0.0:
+            x = hi_x
+        else:
+            x = float(brentq(f, lo_x, hi_x, xtol=1e-10))
+    return x * float(volume_L) / BASIS_L
 
 
 # ------------------------------------------------- boundary with the optimiser

@@ -140,7 +140,9 @@ def solve(pH_m, V_hat, ctx=None, par=P, T=25.0, H=None):
 
 
 def closed_form(pH_m, V_hat, par=P, T=25.0):
-    """Handover rule P4/P5 (adaptive, measurement error only). Used to verify the MILP."""
+    """Handover rule P4/P5 (adaptive, measurement error only). Used to verify the MILP.
+    Pure-water rule: it takes the dose direction from the sign of n, which is only right
+    when n = 0 sits inside the stop band, so use it with use_analytic_chemistry()."""
     nhat = n_of(pH_m, V_hat, T)
     beta = 10 ** par["delta"]
     edge = n_of(par["stop"][1] if nhat > 0 else par["stop"][0], V_hat, T)

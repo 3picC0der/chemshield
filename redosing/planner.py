@@ -21,6 +21,7 @@ from __future__ import annotations
 import time
 
 from sim import rdo
+from sim.engine import ensure_table_chemistry
 from sim.model import C, P
 
 # I4 channel names <-> the optimiser's pump index (sim/model.py PUMPS order)
@@ -66,6 +67,9 @@ def plan_block(state: dict, par: dict = P) -> dict:
     if age > MAX_SAMPLE_AGE_S:
         return _escalate("STALE", detail=f"sample_age_s={age:.1f}")
 
+    # plan on the tank's pH table, not the pure-water formula, even when the gateway
+    # calls this directly without sim.batch or sim.live having set the chemistry up
+    ensure_table_chemistry()
     ph_m = float(state["ph"])
     v_hat = float(state.get("volume_L", par["V0"]))
     temp_c = float(state.get("temp_c", par["T_C"]))
