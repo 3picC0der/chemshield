@@ -1,0 +1,223 @@
+{
+  "c2_gateway_only_path": {
+    "results": [
+      {
+        "test_case": "authorized_gateway_path",
+        "attempt": "HMI/MILP -> Gateway -> Actuator",
+        "expected": "ACCEPT and forward",
+        "decision": "ACCEPT",
+        "reason_code": "ACCEPTED",
+        "forwarded_to_actuator": true,
+        "pass_fail": "PASS"
+      },
+      {
+        "test_case": "direct_bypass_attempt",
+        "attempt": "Operator laptop -> Actuator without gateway",
+        "expected": "REJECT/BLOCK",
+        "decision": "REJECT",
+        "reason_code": "BYPASS_BLOCKED",
+        "forwarded_to_actuator": false,
+        "pass_fail": "PASS"
+      },
+      {
+        "test_case": "direct_attempt_during_safe_hold",
+        "attempt": "Direct actuator write while ChemShield is SAFE_HOLD",
+        "expected": "REJECT/BLOCK",
+        "decision": "REJECT",
+        "reason_code": "BYPASS_BLOCKED",
+        "forwarded_to_actuator": false,
+        "pass_fail": "PASS"
+      }
+    ],
+    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/c2_gateway_only_path_results.csv",
+    "pass_fail": "PASS",
+    "target": "Only gateway-forwarded commands reach the actuator; direct bypass attempts fail."
+  },
+  "security": {
+    "total_commands": 14000,
+    "per_category": 1000,
+    "replay_stale_rejection_rate_percent": 100.0,
+    "target_replay_stale_rejection_rate_percent": 99.0,
+    "valid_command_acceptance_rate_percent": 100.0,
+    "malicious_commands_reaching_actuator": 0,
+    "audit_log_hash_chain_valid": true,
+    "median_latency_ms": 0.014,
+    "p95_latency_ms": 0.0215,
+    "max_latency_ms": 4.96,
+    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/security_test_commands.csv",
+    "summary_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/reports/security_test_summary.csv",
+    "audit_jsonl": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/hash_chained_audit_log.jsonl",
+    "category_results": [
+      {
+        "category": "valid",
+        "total": 1000,
+        "accepted": 1000,
+        "rejected": 0,
+        "forwarded_to_actuator": 1000,
+        "rejection_rate_percent": 0.0
+      },
+      {
+        "category": "replay",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "stale",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "reused_nonce",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "out_of_order_sequence",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "invalid_hmac",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "unsigned",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "oversize",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "wrong_role_or_session",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "malformed",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "replayed_after_reboot",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "gateway_bypass_attempt",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "burst_during_lockout",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      },
+      {
+        "category": "bad_certificate",
+        "total": 1000,
+        "accepted": 0,
+        "rejected": 1000,
+        "forwarded_to_actuator": 0,
+        "rejection_rate_percent": 100.0
+      }
+    ],
+    "pass_fail": "PASS"
+  },
+  "failsafe": {
+    "results": [
+      {
+        "test_case": "cable_disconnection",
+        "time_until_dosing_blocked_s": 0.0,
+        "time_until_safe_hold_s": 1.05,
+        "commands_accepted_after_failure": 0,
+        "restart_reset_behavior": "new authenticated session + manual acknowledgement required",
+        "pass_fail": "PASS"
+      },
+      {
+        "test_case": "heartbeat_loss",
+        "time_until_dosing_blocked_s": 0.0,
+        "time_until_safe_hold_s": 1.05,
+        "commands_accepted_after_failure": 0,
+        "restart_reset_behavior": "new authenticated session + manual acknowledgement required",
+        "pass_fail": "PASS"
+      },
+      {
+        "test_case": "gateway_shutdown",
+        "time_until_dosing_blocked_s": 0.0,
+        "time_until_safe_hold_s": 0.0,
+        "commands_accepted_after_failure": 0,
+        "restart_reset_behavior": "new authenticated session + manual acknowledgement required",
+        "pass_fail": "PASS"
+      },
+      {
+        "test_case": "plc_reboot",
+        "time_until_dosing_blocked_s": 0.0,
+        "time_until_safe_hold_s": 0.0,
+        "commands_accepted_after_failure": 0,
+        "restart_reset_behavior": "new authenticated session + manual acknowledgement required",
+        "pass_fail": "PASS"
+      },
+      {
+        "test_case": "corrupted_message",
+        "time_until_dosing_blocked_s": 0.0,
+        "time_until_safe_hold_s": 0.0,
+        "commands_accepted_after_failure": 0,
+        "restart_reset_behavior": "new authenticated session + manual acknowledgement required",
+        "pass_fail": "PASS"
+      }
+    ],
+    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/failsafe_results.csv",
+    "pass_fail": "PASS"
+  },
+  "int_s1": {
+    "events_count": 100,
+    "max_elapsed_s": 0.1019,
+    "raw_csv": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/raw/int_s1_recovery_timing.csv",
+    "pass_fail": "PASS"
+  },
+  "artifacts": {
+    "security_plot": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/plots/security_test_summary.png",
+    "failsafe_plot": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/plots/failsafe_summary.png",
+    "network_diagram": "/mnt/data/ChemShield_Khalid_Gateway_HMI_Work/evidence/generated/plots/network_trust_boundary_diagram.png"
+  }
+}

@@ -1,6 +1,34 @@
-# HMI — Khalid (build), Hattan (design)
-Web page served by the Pi: pH trend, state banner, dose request form, decision + reason, Model A label and latency, recovery plan and mixing countdown, mmol counter, HALT/ACK, attack counters, audit log.
-Evidence: S5 SUS study.
+# HMI — Khalid build
+
+This is a lightweight web HMI for the ChemShield demo.
+
+## What it shows
+
+- pH value and system state.
+- Dose request form.
+- Gateway ACCEPT/REJECT decision and reason code.
+- Model A label, score, and latency.
+- Attack counters / command counters.
+- Audit log table.
+- HALT and ACK buttons.
+
+## Run
+
+From the repository root:
+
+```bash
+uvicorn hmi.app:app --reload
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+This HMI uses the gateway package in `gateway/src`. It is a demo HMI and can be connected later to the final simulator/Model A/Uno bridge.
+
+## Design
 
 The design is specified in **`DESIGN.md`** (Hattan, 28 Sep) with a static layout
 reference in `wireframe.html`. Section 1 of DESIGN.md lists the five elements the test

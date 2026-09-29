@@ -1,0 +1,6 @@
+test_case,time_until_dosing_blocked_s,time_until_safe_hold_s,commands_accepted_after_failure,restart_reset_behavior,pass_fail
+cable_disconnection,0.0,1.05,0,new authenticated session + manual acknowledgement required,PASS
+heartbeat_loss,0.0,1.05,0,new authenticated session + manual acknowledgement required,PASS
+gateway_shutdown,0.0,0.0,0,new authenticated session + manual acknowledgement required,PASS
+plc_reboot,0.0,0.0,0,new authenticated session + manual acknowledgement required,PASS
+corrupted_message,0.0,0.0,0,new authenticated session + manual acknowledgement required,PASS

@@ -1,0 +1,15 @@
+category,total,accepted,rejected,forwarded_to_actuator,rejection_rate_percent
+valid,1000,1000,0,1000,0.0
+replay,1000,0,1000,0,100.0
+stale,1000,0,1000,0,100.0
+reused_nonce,1000,0,1000,0,100.0
+out_of_order_sequence,1000,0,1000,0,100.0
+invalid_hmac,1000,0,1000,0,100.0
+unsigned,1000,0,1000,0,100.0
+oversize,1000,0,1000,0,100.0
+wrong_role_or_session,1000,0,1000,0,100.0
+malformed,1000,0,1000,0,100.0
+replayed_after_reboot,1000,0,1000,0,100.0
+gateway_bypass_attempt,1000,0,1000,0,100.0
+burst_during_lockout,1000,0,1000,0,100.0
+bad_certificate,1000,0,1000,0,100.0
