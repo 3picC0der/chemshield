@@ -213,7 +213,8 @@ function renderPlan(s) {
   }
   if (!p) {
     tag.classList.add("hidden");
-    h += `<div class="note" style="margin-top:0">No recovery running. The optimiser plans doses only after an unsafe event is confirmed.</div>`;
+    h += ev ? `<div class="note" style="margin-top:0">No doses planned for this event yet.</div>`
+            : `<div class="note" style="margin-top:0">No recovery running. The optimiser plans doses only after an unsafe event is confirmed.</div>`;
     if (s.last_event) {
       const le = s.last_event;
       h += `<div class="two"><div>${kv("Last event", esc(le.id))}${kv("Recovered in", le.recovery_time_s !== null ? num(le.recovery_time_s, 0) + " s (limit 300)" : "—")}</div>
@@ -258,7 +259,7 @@ function renderPlan(s) {
 function renderEvidence(s) {
   // --- INT-S1 timing
   const rows = s.timing || [];
-  let h = `<div class="note" style="margin-top:0">INT-S1: the system must enter safe-recovery mode within 2 s of confirming an unsafe event. Each time is measured on the Pi's clock from the moment the event was confirmed.</div>`;
+  let h = `<div class="note" style="margin-top:0">INT-S1: the system must enter safe-recovery mode within 2 s of confirming an unsafe event. Each time is measured on the Pi's clock from the moment the event was confirmed. "HMI showed it" is when this screen actually drew the red banner, so keep the HMI in front: browsers slow down tabs that are hidden.</div>`;
   h += `<table style="margin-top:8px"><thead><tr><th>Event</th><th>Confirmed</th><th>Recovery mode</th><th>Uno locked</th><th>HMI showed it</th><th>Result</th></tr></thead><tbody>`;
   if (!rows.length) h += `<tr><td colspan="6" class="wait">No event yet.</td></tr>`;
   for (const r of rows) {
@@ -375,10 +376,15 @@ function reportShown(s) {
   if (!ev || shownEvents.has(ev.id)) return;
   if (!["RECOVERY", "ESCALATE", "HALTED"].includes(s.mode)) return;
   shownEvents.add(ev.id);
-  // report once the browser has painted the banner (next animation frame, then a task)
+  // report once the browser has painted the banner (next animation frame, then a task);
+  // a hidden tab paints nothing, so then wait until the operator can actually see it
   let sent = false;
   const send = () => { if (!sent) { sent = true; api("/api/action", {action: "HMI_SHOWN", args: {event_id: ev.id}}); } };
-  requestAnimationFrame(() => setTimeout(send, 0));
+  const afterPaint = () => requestAnimationFrame(() => setTimeout(send, 0));
+  if (document.visibilityState === "visible") afterPaint();
+  else document.addEventListener("visibilitychange", function once() {
+    if (document.visibilityState === "visible") { document.removeEventListener("visibilitychange", once); afterPaint(); }
+  });
 }
 
 function renderLog(recs) {
