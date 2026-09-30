@@ -94,16 +94,23 @@ def test_molarity_matches_the_planner():
 
 
 def test_hmi_eleven_bulk_doses():
-    from hmi import app as hmi
-    clock = ManualClock()
-    hmi.gateway = GatewayValidator(config=hmi.config, state=ProcessState(), clock=clock)
+    """Through the HMI path, during one recovery event: 10 x 5 mmol accepted, the 11th refused."""
+    from hmi.tests.helpers import station_with_stand_in_model_a, hmi_dose
+    st, clock, run = station_with_stand_in_model_a()
+    st.set_auto_recovery(False)
+    st.link.set_ph(4.0)                                         # an unsafe acid event
+    run(6)
+    assert st.event is not None
     out = []
     for _ in range(11):
-        clock.advance(15.0)
-        out.append(hmi.api_dose(hmi.DoseRequest(channel_id="ACID_BULK", volume_ml=10.0)))
-    assert [r["decision"] for r in out] == ["ACCEPT"] * 10 + ["REJECT"], out
+        run(15.1)
+        r = hmi_dose(st, "BASE_BULK", 10.0, event_id=st.event["id"])
+        out.append(r)
+        if r["decision"] == "ACCEPT":
+            st.cancel_dose(r["command_id"])                     # counted by the gateway anyway
+    assert [r["decision"] for r in out] == ["ACCEPT"] * 10 + ["REJECT"], [r["reason_code"] for r in out]
     assert out[-1]["reason_code"] == "EVENT_MMOL_LIMIT"
-    assert hmi.api_state()["event_mmol_used"] == 50.0
+    assert st.gateway.event_mmol_used[st.event["id"]] == 50.0
 
 
 TESTS = [test_mmol_is_volume_times_molarity, test_50_mmol_per_event_ignoring_the_clients_number,

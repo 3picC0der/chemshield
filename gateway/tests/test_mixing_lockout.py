@@ -48,19 +48,20 @@ def test_second_dose_waits_15_s():
 
 
 def test_hmi_six_back_to_back_doses():
-    from hmi import app as hmi
-    hmi.gateway = GatewayValidator(config=hmi.config, state=ProcessState(), clock=ManualClock(1000.0))
-    results = [hmi.api_dose(hmi.DoseRequest(**_hmi_body(10.0))) for _ in range(6)]
-    assert [r["decision"] for r in results] == ["ACCEPT"] + ["REJECT"] * 5, results
-    assert all(r["reason_code"] == "MIXING_LOCKOUT" for r in results[1:])
-    hmi.gateway.clock.advance(15.0)
-    assert hmi.api_dose(hmi.DoseRequest(**_hmi_body(10.0)))["decision"] == "ACCEPT"
-    assert hmi.api_ack()["mode"] == "NORMAL"                        # ACK does not clear it
-    assert hmi.api_state()["mixing_lockout_remaining_s"] == 15.0
-
-
-def _hmi_body(volume_ml: float) -> dict:
-    return {"channel_id": "BASE_BULK", "volume_ml": volume_ml}
+    """The same check through the HMI path (laptop HMI -> station -> this gateway)."""
+    from hmi.tests.helpers import station_with_stand_in_model_a, hmi_dose
+    st, clock, run = station_with_stand_in_model_a()
+    first = hmi_dose(st, "BASE_FINE", 10.0)
+    assert first["decision"] == "ACCEPT", first
+    assert st.dose_added(first["command_id"])["ok"]            # the operator added it
+    results = [hmi_dose(st, "BASE_FINE", 10.0) for _ in range(5)]
+    assert all(r["reason_code"] == "MIXING_LOCKOUT" for r in results), results
+    run(15.1)
+    second = hmi_dose(st, "BASE_FINE", 10.0)
+    assert second["decision"] == "ACCEPT", second
+    assert st.dose_added(second["command_id"])["ok"]
+    st.acknowledge()                                            # ACK does not clear it
+    assert st.state()["gateway"]["lockout_s"] > 14.0
 
 
 def test_attack_runner_bursts_meet_a_real_lockout():

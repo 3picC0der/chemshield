@@ -10,8 +10,9 @@ ACTUATOR_IP="192.168.50.2"     # replace in lab
 PLC_OR_UNO_PORT="502"          # replace if using TCP Modbus/bridge; not used for USB serial
 GATEWAY_USER="chemshield"      # Linux user that runs the gateway service
 SSH_PORT="22"
-# The HMI's port. The same variable starts the HMI (see hmi/README.md):
-#   uvicorn hmi.app:app --host 0.0.0.0 --port "${CHEMSHIELD_HMI_PORT:-8000}"
+# The port the laptop HMI reaches the gateway on. The same variable starts the Pi station
+# (see hmi/README.md):
+#   .venv/bin/python -m hmi.station --ph-source uno --port "${CHEMSHIELD_HMI_PORT:-8000}"
 HMI_PORT="${CHEMSHIELD_HMI_PORT:-8000}"
 
 # 1) Disable IP forwarding so the Pi cannot act as a transparent router.
