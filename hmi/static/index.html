@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChemShield HMI</title>
+<link rel="stylesheet" href="/static/hmi.css">
+</head>
+<body>
+
+<header class="bar">
+  <h1>ChemShield &nbsp;&mdash;&nbsp; Neutralisation Tank T-101</h1>
+  <div class="bar-right">
+    <span id="gw-dot" class="dot dot-grey"></span><span id="gw-text">Connecting…</span>
+    &nbsp;|&nbsp; Operator: <span id="operator">—</span>
+    &nbsp;|&nbsp; <span id="clock">--:--:--</span>
+  </div>
+</header>
+
+<div id="sim-band" class="sim-band hidden" role="note">
+  <b>SIMULATED pH</b> &nbsp;·&nbsp; The tank is a computer simulation (Hattan's simulator), not the probe.
+  Every other part is real: the gateway, Model A, the planner and the audit log.
+  <span id="sim-chem" class="sim-chem"></span>
+</div>
+<div id="key-warn" class="key-warn hidden">Using the built-in demo key. Run <code>python -m hmi.keygen</code> and copy the key to the Pi before the PPR.</div>
+<div id="offline" class="offline hidden"></div>
+
+<section id="banner" class="banner banner-normal" aria-live="polite">
+  <div class="banner-title" id="banner-title">NORMAL</div>
+  <div class="banner-metrics" id="banner-metrics"></div>
+</section>
+
+<main class="grid">
+  <!-- ============================== column 1 -->
+  <div class="col">
+    <section class="card">
+      <h2>Tank pH <span id="ph-source" class="tag">—</span></h2>
+      <div class="ph-row"><span id="ph-value" class="ph">--</span><span id="ph-sub" class="phu">waiting for readings</span></div>
+      <div class="scale" aria-hidden="true">
+        <div class="track"></div>
+        <div class="band" id="scale-band"></div>
+        <div class="guard" id="scale-g1"></div><div class="guard" id="scale-g2"></div>
+        <div class="now" id="scale-now"></div>
+      </div>
+      <div class="ticks"><span>2</span><span>4</span><span>5.5</span><span>6.0</span><span>8.5</span><span>9.5</span><span>12</span></div>
+      <div class="chart"><svg id="trend" viewBox="0 0 340 130"></svg></div>
+      <div class="ticks" style="margin-top:4px"><span>&minus;5 min</span><span>now</span></div>
+      <div class="kv"><span class="k">Recovery band</span><span class="v">6.0 &ndash; 8.5</span></div>
+      <div class="kv"><span class="k">Far-side limits</span><span class="v">5.5 / 9.5</span></div>
+      <div class="kv"><span class="k">Reading</span><span class="v">mean of 3, &plusmn;0.1 pH</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Event detail</h2>
+      <div id="event-detail"></div>
+    </section>
+  </div>
+
+  <!-- ============================== column 2 -->
+  <div class="col col-wide">
+    <section class="card">
+      <h2>Recovery plan <span id="plan-tag" class="tag hidden"></span></h2>
+      <div id="plan"></div>
+    </section>
+
+    <section class="card">
+      <h2>Evidence
+        <span class="tabs" id="ev-tabs">
+          <span class="tab on" data-tab="timing">Recovery-mode timing</span>
+          <span class="tab" data-tab="hold">10-minute pH hold</span>
+          <span class="tab" data-tab="s4">Model A timing</span>
+        </span>
+      </h2>
+      <div id="ev-timing"></div>
+      <div id="ev-hold" class="hidden"></div>
+      <div id="ev-s4" class="hidden"></div>
+    </section>
+  </div>
+
+  <!-- ============================== column 3 -->
+  <div class="col">
+    <section class="card">
+      <h2>Operator action</h2>
+      <button id="btn-halt" class="btn halt">HALT DOSING</button>
+      <button id="btn-resume" class="btn resume hidden">RESUME DOSING</button>
+      <button id="btn-ack" class="btn ack">ACKNOWLEDGE</button>
+      <div class="note" id="action-note">HALT stops all dosing at once. Doses are allowed again only after RESUME.</div>
+    </section>
+
+    <section class="card dose-now hidden" id="dose-now">
+      <h2>Dose now</h2>
+      <div class="dose-instr" id="dose-instr"></div>
+      <div class="note" id="dose-meta"></div>
+      <button id="btn-added" class="btn req">DOSE ADDED</button>
+      <button id="btn-notadded" class="btn ack small">Not added: cancel it</button>
+    </section>
+
+    <section class="card">
+      <h2>Manual dose request</h2>
+      <label class="lab" for="dose-ch">Bottle</label>
+      <select id="dose-ch">
+        <option value="BASE_BULK">NaOH 0.5 M bulk (base)</option>
+        <option value="BASE_FINE">NaOH 0.005 M fine (base)</option>
+        <option value="ACID_BULK">HCl 0.5 M bulk (acid)</option>
+        <option value="ACID_FINE">HCl 0.005 M fine (acid)</option>
+      </select>
+      <label class="lab" for="dose-ml">Dose (mL, 20 max)</label>
+      <input id="dose-ml" type="number" inputmode="decimal" step="0.1" min="0" value="10" aria-label="dose in mL">
+      <button id="btn-dose" class="btn req">REQUEST DOSE</button>
+      <div id="dose-reply" class="reply hidden"></div>
+      <div id="lockout" class="note"></div>
+    </section>
+
+    <section class="card">
+      <h2>Safety state</h2>
+      <div id="safety"></div>
+    </section>
+  </div>
+</main>
+
+<section class="card log">
+  <h2>Audit log &mdash; append-only, hash chained
+    <span class="tabs" id="log-tabs">
+      <span class="tab on" data-only="all">all</span>
+      <span class="tab" data-only="rejected">rejected only</span>
+    </span>
+  </h2>
+  <div class="counters" id="counters"></div>
+  <table>
+    <thead><tr><th style="width:90px">Time</th><th style="width:96px">Source</th><th>Message</th><th style="width:90px">Decision</th><th style="width:170px">Reason</th><th style="width:120px">Hash</th></tr></thead>
+    <tbody id="log-body"></tbody>
+  </table>
+  <div class="log-foot">
+    <a class="linkbtn" href="/api/export/audit.csv">Export audit log (CSV)</a>
+    <a class="linkbtn" href="/api/export/audit.jsonl">Export for verify_log (JSONL)</a>
+    <button class="linkbtn" id="btn-verify">Check the hash chain</button>
+    <span id="verify-out" class="note"></span>
+  </div>
+</section>
+
+<details class="card engineer" id="engineer">
+  <summary>Engineer and demo panel</summary>
+  <div class="eng-grid">
+    <div id="sim-panel">
+      <h3>Simulator (SIM mode only)</h3>
+      <div class="row">
+        <select id="sim-scenario"></select>
+        <button class="btn2" id="btn-sim-scn">Inject this upset</button>
+      </div>
+      <div class="row">
+        <input id="sim-ml" type="number" step="0.5" value="7" aria-label="upset mL"> mL of 0.5 M
+        <select id="sim-acid"><option value="1">acid</option><option value="0">base</option></select>
+        <button class="btn2" id="btn-sim-upset">Add without the gateway</button>
+      </div>
+      <div class="row">
+        Set pH <input id="sim-ph" type="number" step="0.1" value="6.0" aria-label="set pH">
+        <button class="btn2" id="btn-sim-setph">Set</button>
+        <button class="btn2" id="btn-sim-reset">New tank (pH 7)</button>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="sim-autopump"> Add accepted doses automatically</label>
+      </div>
+      <div class="row">
+        <button class="btn2" id="btn-sim-unplug">Pull the Uno's USB for 8 s</button>
+      </div>
+      <div class="note" id="sim-out"></div>
+    </div>
+    <div>
+      <h3>Security tests (S3, C2)</h3>
+      <div class="note">Each sends a bad command to the gateway on purpose. Watch the reason in the log.</div>
+      <div class="row"><button class="btn2" id="t-replay">Replay the last command</button></div>
+      <div class="row"><button class="btn2" id="t-stale">Send a command dated 5 s ago</button></div>
+      <div class="row"><button class="btn2" id="t-unsigned">Send an unsigned command</button></div>
+      <div class="row"><button class="btn2" id="t-forged">Send one signed with a wrong key</button></div>
+      <div class="note" id="test-out"></div>
+    </div>
+    <div>
+      <h3>Recovery and exports</h3>
+      <div class="row"><label><input type="checkbox" id="auto-rec" checked> Automatic recovery (planner doses)</label></div>
+      <div class="row"><a class="linkbtn" href="/api/export/int_s1_timing.csv">INT-S1 timing (CSV)</a></div>
+      <div class="row"><a class="linkbtn" href="/api/export/s1_hold.csv">S1 10-minute hold (CSV)</a></div>
+      <div class="row"><a class="linkbtn" href="/api/export/ph_trend.csv">pH log (CSV)</a></div>
+      <div class="note" id="link-info"></div>
+    </div>
+  </div>
+</details>
+
+<script src="/static/hmi.js"></script>
+</body>
+</html>
