@@ -163,12 +163,21 @@ def _do_action(station: Station, action: str, args: dict[str, Any]) -> dict[str,
         start = args.get("start_ph", link.start_ph)
         out = link.reset(float(start) if start is not None else None)
         station.audit.event("SIM_RESET", f"SIMULATOR: fresh 5 L tank, pH {out['ph']}", source="simulator")
+        station.fresh_start("simulator reset")
         return {"ok": True, **out}
     if a == "SIM_AUTOPUMP":
         link.auto_pump = bool(args.get("on", True))
         station.audit.event("SIM_AUTOPUMP", f"SIMULATOR: doses added automatically "
                             f"{'on' if link.auto_pump else 'off'}", source="simulator")
         return {"ok": True, "auto_pump": link.auto_pump}
+    if a == "SIM_ESCALATE":
+        # Usability drill (ISE-AT-03 task T4): a real escalation takes minutes to build up.
+        if station.event is None:
+            return {"ok": False, "error": "start an upset first; an escalation needs an open event"}
+        station.audit.event("SIM_ESCALATE", "SIMULATOR: escalation forced for a usability drill",
+                            source="simulator", event_id=station.event["id"])
+        station._escalate("INFEASIBLE", "(usability drill)")
+        return {"ok": True, "mode": station.mode}
     if a == "SIM_UNPLUG":
         out = link.unplug(float(args.get("seconds", 8.0)))
         station.audit.event("SIM_UNPLUG", f"SIMULATOR: Uno USB 'unplugged' for {out['unplugged_for_s']:g} s",

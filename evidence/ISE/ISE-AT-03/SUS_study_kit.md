@@ -13,8 +13,12 @@ Participants must be students who are **not on the team** and have **never seen 
 
 Before each participant:
 
-- [ ] Tank reset to pH 7.0, state `NORMAL`, `python -m sim.live` running
-- [ ] Audit log cleared or scrolled to top
+- [ ] `.venv/bin/python -m hmi.demo` running; tank reset to pH 7.0 and state `NORMAL`
+      (`.venv/bin/python -m hmi.facilitator reset`)
+- [ ] Audit log showing "all", scrolled to the top (it is append-only, so it can't be
+      cleared; newest entries are on top). Before the **first** participant, put a few
+      rejections in it for T5: `.venv/bin/python -m hmi.attack_station --mode replay-now --n 2`
+      and `.venv/bin/python -m hmi.attack_station --mode stale --n 1`
 - [ ] Browser zoom at 100%, screen at the booth resolution
 - [ ] Timer ready; blank task record and SUS form printed
 - [ ] Screen recording on (only with the participant's spoken permission)
@@ -42,18 +46,21 @@ done". Record time and whether they finished **without help**. If they are stuck
 | **T4** | *(facilitator triggers an escalation)* "The system is asking for your decision. Acknowledge it, and stop the automatic dosing." | Presses Acknowledge, then Halt Dosing |
 | **T5** | "Find the last three rejected commands and tell me why each one was rejected." | Opens the log (or the rejected-only filter) and reads three reason codes |
 
-Injections the facilitator does, from a second window:
+Injections the facilitator does from a second terminal window, out of the participant's
+sight (the HMI's own engineer panel has the same controls, so keep it closed):
 
 ```bash
-# T3
-echo '{"cmd":"upset","scenario":"medium_acid"}' | nc -u -w0 127.0.0.1 9100
-# T4
-echo '{"cmd":"upset","scenario":"beyond_budget"}' | nc -u -w0 127.0.0.1 9100
-# between participants
-echo '{"cmd":"reset"}' | nc -u -w0 127.0.0.1 9100
+# T3: an acid upset; the banner turns red and recovery starts by itself
+.venv/bin/python -m hmi.facilitator upset medium_acid
+# T4: while that recovery runs, ask for the operator's decision
+.venv/bin/python -m hmi.facilitator escalate
+# between participants: fresh tank at pH 7, NORMAL, nothing halted
+.venv/bin/python -m hmi.facilitator reset
 ```
 
-(`sim.live` must be started with `--listen 9100`.)
+T2 note: 10 mL of the 0.5 M base at pH 7 would push the tank past 9.5, so the gateway
+rejects it (Model A block) and says why. That still counts: the task is to send the
+request and see the reply.
 
 ---
 

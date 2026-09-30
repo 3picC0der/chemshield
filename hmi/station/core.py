@@ -683,6 +683,29 @@ class Station:
                          f"was confirmed (spec: under 2000 ms)", event_id=event_id, source="HMI")
         return {"ok": True, "ms": round(ms, 1)}
 
+    def fresh_start(self, why: str) -> None:
+        """Back to NORMAL with nothing open (a new tank in the simulator, between SUS
+        participants). The audit log keeps everything; an open event is marked abandoned."""
+        if self.pending is not None:
+            self._cancel_pending(why)
+        if self.event is not None:
+            self.event["status"] = "closed"
+            self.event["closed_utc"] = _wall()
+            self.audit.event("EVENT_ABANDONED", f"event left open by a {why}", event_id=self.event["id"])
+            self.event = None
+        self.block, self.plan, self.escalation = [], None, None
+        self.next_plan_at = self.next_block_at = None
+        self.in_band_since = None
+        self.recent.clear()
+        self.mixing_until = None
+        self.gstate.last_dose_accepted_at_s = None
+        self.gateway.manual_ack_new_session()
+        self._set_mode("NORMAL", why)
+        self.gstate.mode = "NORMAL"
+        self.link.send_mode("NORMAL")
+        self.alarm_acked = True
+        self.auto_recovery = True
+
     def set_auto_recovery(self, on: bool) -> dict[str, Any]:
         self.auto_recovery = bool(on)
         self.audit.event("AUTO_RECOVERY", f"automatic recovery {'on' if on else 'off'}", source="HMI")

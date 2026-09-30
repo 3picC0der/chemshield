@@ -96,12 +96,12 @@ DOSE_PENDING). The full list is `REASONS` in `common.py`.
 | **ICS-AT-03** (S4) | Request any dose. | Event detail and the Model A timing tab: class, score, ms. The 1,000-request run is `python -m model_a.latency_test` |
 | **INT-AT-01** (INT-S1) | NORMAL on screen. Add acid by syringe until pH is under 6.0 (SIM: engineer panel, 7 mL acid). | Banner turns red; Recovery-mode timing tab: confirmed, recovery mode, Uno locked, HMI showed it (ms). Uno light slow-blinks |
 | **INT-AT-02 / ISE-AT-02** (INT-S2, S6) | Follow each "Dose now" box and stir; press DOSE ADDED. | Banner: "pH back in 6.0-8.5 at N s" and the recovery timer |
-| **ISE-AT-01** (C3) | SIM: engineer panel, `acid_upset_max`. During the recovery request a dose past 50 mmol. | Event reagent x / 50 mmol; the extra dose: Over limit (EVENT_MMOL_LIMIT) |
+| **ISE-AT-01** (C3) | SIM: engineer panel, `acid_upset_max` (the sheet's "largest upset"; see "Things to know" below). During the recovery request a dose past 50 mmol. | Event reagent x / 50 mmol; the extra dose: Over limit (EVENT_MMOL_LIMIT) |
 | **CHE-AT-04** (S1) | Evidence → 10-minute pH hold → Start. Add any dose the HMI asks for. | Elapsed / 600 s, lowest and highest pH, PASS; download the CSV |
 | **ICS-AT-02** (S3) | `python -m hmi.attack_station --station http://<pi-ip>:8000 --mode replay-now --n 1000`, then `--mode stale --age 5 --n 1000` and `--age 1 --n 100` | Audit log counters (Replayed, Stale) against the script's summary; `python -m hmi.verify_log <exported audit.jsonl>` prints CHAIN OK |
 | **ICS-AT-01** (C2) | Engineer panel: "unsigned" and "wrong key"; from another laptop, `curl` a dose to the Pi | Not authorised; the station answers HTTP 401 |
 | **INT-AT-04** | SIM step 4: set pH 6.3 (6.0 exactly can confirm an event from probe noise), then 20 mL HCl 0.5 M bulk. Unplug the Uno's USB during a dose. | Model A block; HALTED, "Uno link lost", doses refused until RESUME DOSING |
-| **ISE-AT-03** (S5) | The five tasks: read pH; request 10 mL of bulk base; respond to the alarm (ACKNOWLEDGE); stop dosing (HALT DOSING); find the last rejected command (audit log → rejected only) | All on one screen, no tabs to hunt through |
+| **ISE-AT-03** (S5) | The five tasks: read pH; request 10 mL of bulk base; respond to the alarm (ACKNOWLEDGE); stop dosing (HALT DOSING); find the last rejected command (audit log → rejected only). The facilitator drives it with `python -m hmi.facilitator` (see the kit in `evidence/ISE/ISE-AT-03/`) | All on one screen, no tabs to hunt through |
 
 For the batch version of INT-S1: `python -m hmi.int_s1_batch --events 100` writes
 `evidence/INT/INT-AT-01/laptop_dry_run/` (confirmed → RECOVERY seen by the HMI, per event).
@@ -136,16 +136,19 @@ USB serial, 115200 baud, one line per message ending in `\n`. This is I5 from
 | `station/audit.py` | Khalid's hash-chained log plus source, event and message, written to disk as it goes |
 | `common.py` | Key, command format, reason words: shared by both sides |
 | `demo.py`, `keygen.py`, `mock_uno.py` | Laptop-only demo, key maker, pretend Uno |
+| `facilitator.py` | Simulator controls from a second terminal (SUS study: upset, escalate, reset) |
 | `verify_log.py`, `attack_station.py`, `int_s1_batch.py` | Evidence tools (INT-AT-04, ICS-AT-02, INT-AT-01) |
 | `tests/` | `.venv/bin/python -m pytest hmi/tests gateway/tests -q` |
 
 ## Things to know
 
-- **Model A sometimes blocks a correct recovery dose** after a big acid upset: in 24
-  simulated upsets, 3 ended in OPERATOR DECISION REQUIRED because it blocked the planner's
-  last bulk dose twice. The station re-reads and re-plans once before asking the operator.
-  Small upsets (the 7 mL INT-AT-01 demo) recovered every time. HALT then RESUME lets the
-  planner try again.
+- **Model A sometimes blocks a correct recovery dose after a big upset.** Over 20
+  simulated runs each: 7 mL acid (the INT-AT-01 demo) recovered 20/20, 40 mL acid 19/20,
+  80 mL base 17/20 and 80 mL acid (`acid_upset_max`) only 14/20. Every miss was Model A's
+  learned part (MODEL_RISK) blocking the planner's dose twice, which ends in OPERATOR
+  DECISION REQUIRED. The station re-reads and re-plans once before asking the operator;
+  HALT then RESUME lets the planner try again. For a live C3/S6 demo a 40 mL upset is the
+  safer choice until Model A is retrained on this recovery pattern.
 - **The event closes** when the pH has stayed inside 6.0-8.5 for 60 s (`--dwell`).
 - **Hand-dose speed** (`--hand-speed`, mL/s) only sets how long the Uno's light stays on.
 - The pH table is still the PLACEHOLDER until CHE's Aspen file lands; the screen says which.

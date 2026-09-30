@@ -303,3 +303,25 @@ def test_laptop_hmi_signs_and_the_gateway_decides(servers):
     op = new_operator_action(SECRET, "HALT")
     assert _req(station_url + "/api/operator", op)[0] == 200
     assert _req(station_url + "/api/operator", op)[0] == 401          # the same action replayed
+
+
+# ------------------------------------------------------------------ ISE-AT-03 facilitator drill
+def test_sus_drill_escalate_then_reset():
+    from hmi.station.server import _do_action
+    st, link, clk, run = make()
+    with st.lock:
+        assert _do_action(st, "SIM_ESCALATE", {})["ok"] is False        # needs an open event
+        _do_action(st, "SIM_UPSET", {"scenario": "medium_acid"})
+    for _ in range(100):
+        run(0.1)
+        if st.event is not None:
+            break
+    with st.lock:
+        assert _do_action(st, "SIM_ESCALATE", {})["mode"] == "ESCALATE"
+        st.acknowledge()
+        st.halt()                                                        # SUS task T4
+        assert st.mode == "HALTED"
+        _do_action(st, "SIM_RESET", {"start_ph": 7.0})
+    assert st.mode == "NORMAL" and st.event is None and st.gstate.mode == "NORMAL"
+    run(5)
+    assert dose(st, "BASE_FINE", 2)[0]["decision"] == "ACCEPT"
