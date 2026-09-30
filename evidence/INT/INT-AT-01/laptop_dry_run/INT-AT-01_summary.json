@@ -1,0 +1,13 @@
+{
+  "test": "INT-AT-01 batch (INT-S1: safe-recovery mode within 2 s of a confirmed unsafe event)",
+  "events": 100,
+  "measured": 100,
+  "confirm_to_recovery_ms_max": 7.1,
+  "confirm_to_hmi_shown_ms_mean": 124.0,
+  "confirm_to_hmi_shown_ms_max": 260.6,
+  "all_under_2000_ms": true,
+  "hmi_poll_s": 0.25,
+  "ph_source": "SIM (simulated tank; the Uno lock ack is simulated)",
+  "machine": "MacBook-Pro-8.local macOS-26.0.1-arm64-arm-64bit python 3.12.12",
+  "note": "Headless HMI client over HTTP on one computer. On the rig add the Wi-Fi hop and the browser paint; the HMI's timing panel measures those live."
+}
