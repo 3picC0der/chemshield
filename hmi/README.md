@@ -60,6 +60,16 @@ pulls the "USB cable" and sends test attacks. Stop with Ctrl+C.
    ```bash
    .venv/bin/python -m hmi --station http://<pi-ip>:8000 --operator "Belal"
    ```
+4. **Clocks, after every Pi boot.** The laptop stamps each request with its own clock and
+   the gateway rejects anything more than 2 s off (Stale). On its own hotspot the Pi has no
+   internet time, so set it from the laptop, then check:
+
+   ```bash
+   .venv/bin/python -m hmi.clock_sync --pi belal@<pi-ip> --station http://<pi-ip>:8000
+   ```
+
+   It needs SSH with passwordless sudo on the Pi (the default user has it). `--check
+   --station http://<pi-ip>:8000` only reads the station's clock.
 
 Every run writes its evidence to `hmi/logs/<date-time>/` on the Pi: `audit.jsonl` (the
 hash-chained log) and `model_a_decisions.csv`. The screen also downloads CSVs.
@@ -136,6 +146,7 @@ USB serial, 115200 baud, one line per message ending in `\n`. This is I5 from
 | `station/audit.py` | Khalid's hash-chained log plus source, event and message, written to disk as it goes |
 | `common.py` | Key, command format, reason words: shared by both sides |
 | `demo.py`, `keygen.py`, `mock_uno.py` | Laptop-only demo, key maker, pretend Uno |
+| `clock_sync.py` | Sets the Pi's clock from the laptop and checks the gap (run after every Pi boot) |
 | `facilitator.py` | Simulator controls from a second terminal (SUS study: upset, escalate, reset) |
 | `verify_log.py`, `attack_station.py`, `int_s1_batch.py` | Evidence tools (INT-AT-04, ICS-AT-02, INT-AT-01) |
 | `tests/` | `.venv/bin/python -m pytest hmi/tests gateway/tests -q` |
