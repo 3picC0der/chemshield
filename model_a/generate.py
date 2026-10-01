@@ -51,7 +51,7 @@ from .truth import LIQUIDS, Liquid, net_base_for_ph, true_ph
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 DEFAULT_OUT = HERE / "data"
-GENERATOR_VERSION = "gen-1"
+GENERATOR_VERSION = "gen-2"
 BULK_M = 0.5
 
 # ------------------------------------------------------------------ parameter ranges
@@ -59,7 +59,8 @@ BULK_M = 0.5
 # numbers with the values measured on the real probe (noise: 60 s in still water;
 # lag: time to 95% of the change after one dose, divided by 3).
 RANGES = {
-    "episode_kind_probs": {"normal": 0.40, "recovery": 0.50, "cumulative": 0.10},
+    # station_recovery: the Pi station's own recovery loop (hmi/station/core.py), dose by dose
+    "episode_kind_probs": {"normal": 0.35, "recovery": 0.40, "station_recovery": 0.15, "cumulative": 0.10},
     "fill_L": (4.8, 5.2),
     "baking_soda_factor": (0.95, 1.05),     # weighing 0.420 g, dissolving, some CO2 exchange
     "start_ph_normal": (6.0, 8.5),
@@ -78,6 +79,20 @@ RANGES = {
     "drift_rate_pH_per_s": (0.002, 0.01),
     "drift_max_pH": 1.5,                    # a drifting probe settles off by at most this much
     "gap_s": (3.0, 25.0),
+}
+# How the Pi station runs a recovery (hmi/station/core.py). station_recovery episodes copy it,
+# so Model A sees the planner's doses at the moments the station really sends them: the
+# next dose of a block 15 s after the last one went in, often while the probe still lags.
+STATION = {
+    "band": (6.0, 8.5),
+    "confirm_readings": 3,         # readings in a row outside the band confirm the event
+    "settle_range_pH": 0.15,       # last 5 readings within this = settled
+    "settle_max_wait_s": 30.0,
+    "mix_s": 15.0,                 # S2 hold after each dose goes in
+    "t_hold_s": 26.0,              # after a block: re-plan this long after its last dose
+    "replan_after_block_s": 10.0,  # after a dose is blocked
+    "dwell_s": 60.0,               # in band this long closes the event
+    "nominal_volume_L": 5.0,
 }
 REQUEST_MIX = {
     "NORMAL": {"fine_correction": 0.30, "rule_controller": 0.15, "wrong_direction": 0.15,
@@ -120,7 +135,8 @@ def sample_episodes(n: int, seed: int, liquid: str) -> list[Episode]:
     for i in range(n):
         kind = str(rng.choice(kinds, p=kind_p))
         duration = int(rng.uniform(180, 420) if kind == "normal"
-                       else rng.uniform(240, 600) if kind == "recovery" else rng.uniform(200, 320))
+                       else rng.uniform(240, 600) if kind == "recovery"
+                       else rng.uniform(300, 600) if kind == "station_recovery" else rng.uniform(200, 320))
         fault = "none"
         if kind != "cumulative" and rng.random() < RANGES["fault_probability"]:
             fault = str(rng.choice(faults, p=fault_p))
@@ -132,8 +148,8 @@ def sample_episodes(n: int, seed: int, liquid: str) -> list[Episode]:
             fault_param = 0.0
         upset_t = float(rng.uniform(8.0, 30.0))
         lo, hi = RANGES["upset_ml_0.5M"]
-        if kind == "recovery":
-            first = upset_t + float(rng.uniform(1.5, 10.0))
+        if kind in ("recovery", "station_recovery"):
+            first = upset_t + float(rng.uniform(1.5, 10.0))       # (station_recovery: unused)
         else:
             first = float(rng.uniform(1.0, 4.0) if rng.random() < 0.05 else rng.uniform(6.0, 20.0))
         start = RANGES["start_ph_cumulative"] if kind == "cumulative" else RANGES["start_ph_normal"]
@@ -212,18 +228,20 @@ def make_request(kind: str, ph_mean: float, rng, chem, volume_L: float, planner_
 
 # ------------------------------------------------------------------ one episode
 _PLANNER = None
+_PLAN_BLOCK = None
 
 
 def _worker_init() -> None:
     """Per process: point the planner at the pH table, as the live loop does."""
-    global _PLANNER
+    global _PLANNER, _PLAN_BLOCK
     import warnings
     warnings.filterwarnings("ignore", message=".*PLACEHOLDER.*")
     default_chemistry()                                     # honours MODEL_A_TABLE_DIR
     from sim.engine import use_table_chemistry
     use_table_chemistry()
-    from redosing.planner import plan_next_dose
+    from redosing.planner import plan_block, plan_next_dose
     _PLANNER = plan_next_dose
+    _PLAN_BLOCK = plan_block
 
 
 def run_episode(ep: Episode) -> list[dict]:
@@ -363,6 +381,191 @@ def run_episode(ep: Episode) -> list[dict]:
     return rows
 
 
+def run_station_episode(ep: Episode) -> list[dict]:
+    """One upset recovered the way the Pi station does it (hmi/station/core.py).
+
+    The tank, probe, faults and labels are the same as run_episode. The requests are the
+    planner's own doses, sent when the station sends them: after the event is confirmed
+    (3 readings outside 6.0-8.5), on the mean of the last 3 readings, once the reading has
+    settled (or 30 s have passed), then each further dose of the block 15 s after the
+    previous one went in. A dose the label calls harmful is treated as blocked, and the
+    station plans again 10 s later, as it does after a Model A block.
+    """
+    rng = np.random.default_rng(ep.seed)
+    chem = default_chemistry()
+    liquid: Liquid = LIQUIDS[ep.liquid].scaled(ep.baking_soda_factor)
+    volume = ep.fill_L
+    net = net_base_for_ph(ep.start_ph, volume, liquid)
+    ph_true = true_ph(net, volume, liquid)
+    probe = ph_true
+    samples: list[tuple[float, float]] = []
+    dose_log: list[dict] = []
+    pending: list[tuple[float, float, float]] = []
+    last_uno = None
+    stuck_value = None
+    slow_until = -1.0
+    wrong_bottle_used = False
+    upset_done = False
+    lo, hi = STATION["band"]
+    rows: list[dict] = []
+
+    t_confirm = None
+    block: list[dict] = []
+    waiting_added: tuple[float, dict] | None = None        # (t the operator adds it, dose)
+    next_issue = next_plan = None
+    event_mmol = event_ml = 0.0
+    doses_in_event = 0
+    in_band_since = None
+
+    for k in range(ep.duration_s + 1):
+        t = float(k)
+        # ---- the true tank (as in run_episode)
+        if not upset_done and t >= ep.upset_t:
+            mmol = BULK_M * ep.upset_ml
+            net += -mmol if ep.upset_acid else mmol
+            volume += ep.upset_ml / 1000.0
+            ph_true = true_ph(net, volume, liquid)
+            upset_done = True
+        due = [p for p in pending if p[0] <= t]
+        if due:
+            pending = [p for p in pending if p[0] > t]
+            for _t, dnet, dml in due:
+                net += dnet
+                volume += dml / 1000.0
+                if ep.fault == "nostir" and t >= ep.fault_t:
+                    slow_until = t + 60.0
+            ph_true = true_ph(net, volume, liquid)
+
+        # ---- the probe (as in run_episode)
+        tau = ep.tau_s * (4.0 if t < slow_until else 1.0)
+        probe += (ph_true - probe) * (1.0 - math.exp(-1.0 / tau))
+        reading = probe + ep.probe_offset + rng.normal(0.0, ep.noise_sd)
+        fault_on = ep.fault != "none" and t >= ep.fault_t
+        send = True
+        if fault_on and ep.fault == "drift":
+            reading += float(np.clip(ep.fault_param * (t - ep.fault_t),
+                                     -RANGES["drift_max_pH"], RANGES["drift_max_pH"]))
+        if fault_on and ep.fault == "stuck":
+            if stuck_value is None:
+                stuck_value = samples[-1][1] if samples else round(reading, 2)
+            reading = stuck_value
+        if fault_on and ep.fault == "gap" and t < ep.fault_t + ep.fault_param:
+            send = False
+        if send:
+            t_arr = t + float(rng.uniform(0.0, 0.05))
+            samples.append((t_arr, float(np.clip(round(reading, 2), 0.0, 14.0))))
+            last_uno = t_arr
+        if not samples or t - samples[-1][0] > 2.0:
+            continue                                        # the station halts on a lost link
+
+        recent = [s[1] for s in samples[-STATION["confirm_readings"]:]]
+        mean3 = float(np.mean(recent))
+        # ---- detection and closing
+        if t_confirm is None:
+            if upset_done and len(recent) == STATION["confirm_readings"] \
+                    and all(not (lo <= r <= hi) for r in recent):
+                t_confirm = t
+                next_plan = t + 1.0
+            continue
+        if lo <= mean3 <= hi:
+            in_band_since = t if in_band_since is None else in_band_since
+            if t - in_band_since >= STATION["dwell_s"] and waiting_added is None:
+                break
+        else:
+            in_band_since = None
+
+        # ---- the operator adds an accepted dose
+        if waiting_added is not None and t >= waiting_added[0]:
+            _t_add, d = waiting_added
+            waiting_added = None
+            pending.append((t, d["dnet"], d["ml_in"]))
+            if any(b["status"] == "queued" for b in block):
+                next_issue = t + STATION["mix_s"] + 0.2
+            else:
+                next_plan = t + STATION["t_hold_s"]
+            continue
+        if waiting_added is not None:
+            continue
+
+        last5 = [s[1] for s in samples[-5:]]
+        settled = len(last5) == 5 and max(last5) - min(last5) <= STATION["settle_range_pH"]
+        queued = [b for b in block if b["status"] == "queued"]
+        item = None
+        if queued:
+            if next_issue is not None and t >= next_issue:
+                if settled or t - next_issue >= STATION["settle_max_wait_s"]:
+                    item = queued[0]
+        elif next_plan is not None and t >= next_plan:
+            if not settled and t - t_confirm < STATION["settle_max_wait_s"] and doses_in_event == 0:
+                next_plan = t + 1.0
+                continue
+            state = {"ph": round(mean3, 4), "temp_c": TEMP_C,
+                     "volume_L": STATION["nominal_volume_L"] + event_ml / 1000.0,
+                     "event_mmol_used": event_mmol, "event_ml_used": event_ml,
+                     "event_elapsed_s": t - t_confirm, "sample_age_s": t - samples[-1][0],
+                     "state": "RECOVERY", "source": "PROBE"}
+            try:
+                res = _PLAN_BLOCK(state) if _PLAN_BLOCK is not None else {"action": "ESCALATE"}
+            except Exception:                                # noqa: BLE001
+                res = {"action": "ESCALATE"}
+            if res.get("action") == "DOSE" and res.get("block"):
+                block = [{"channel_id": b["channel_id"], "dose_ml": float(b["dose_ml"]), "status": "queued"}
+                         for b in res["block"]]
+                next_issue = t
+                next_plan = None
+                item = block[0]
+            elif res.get("action") == "HOLD":
+                next_plan = t + 5.0
+                continue
+            else:
+                break                                       # escalation: the operator takes over
+        if item is None:
+            continue
+
+        # ---- the station sends one planner dose: this is a dataset row
+        now = t + float(rng.uniform(0.06, 0.6))
+        channel = item["channel_id"]
+        dose = float(min(20.0, max(0.1, item["dose_ml"])))
+        feats, problems = build_features(samples, now, channel, dose, dose_log, last_uno, chem=chem)
+        molarity, direction = CHANNELS[channel]
+        factor = ep.hand_bias * (1.0 + rng.normal(0.0, RANGES["hand_dose_noise_sd"]))
+        post_true = true_ph(net - direction * molarity * dose * factor, volume + dose * factor / 1000.0, liquid)
+        rules = harmful_rules(ph_true, post_true)
+        valid = not problems
+        rows.append({
+            "episode_id": ep.episode_id, "episode_kind": ep.kind, "liquid": ep.liquid,
+            "baking_soda_factor": round(ep.baking_soda_factor, 4), "fault": ep.fault,
+            "fault_active": int(fault_on), "state": "RECOVERY", "request_idx": len(rows), "t_s": round(now, 3),
+            "request_type": "station_planner", "channel_id": channel, "dose_ml": dose,
+            "true_ph_before": round(ph_true, 4), "true_ph_after": round(post_true, 4),
+            "label_rules": rules, "harmful": int(bool(rules)), "valid": int(valid),
+            "invalid_reason": problems[0] if problems else "",
+            **{n: feats[n] for n in FEATURES},
+        })
+        if valid and not rules:
+            item["status"] = "sent"
+            dose_log.append({"t": now, "channel_id": channel, "dose_ml": dose,
+                             "predicted_post_ph": feats["predicted_post_ph"]})
+            m_applied = molarity
+            if ep.fault == "wrong_bottle" and fault_on and not wrong_bottle_used:
+                m_applied = 0.005 if molarity == BULK_M else BULK_M
+                wrong_bottle_used = True
+            waiting_added = (now + float(rng.uniform(*RANGES["hand_delay_s"])),
+                             {"dnet": -direction * m_applied * dose * factor, "ml_in": dose * factor})
+            event_mmol += molarity * dose
+            event_ml += dose
+            doses_in_event += 1
+        else:
+            block = [b for b in block if b["status"] != "queued"]
+            next_issue = None
+            next_plan = t + STATION["replan_after_block_s"]
+    return rows
+
+
+def run_any_episode(ep: Episode) -> list[dict]:
+    return run_station_episode(ep) if ep.kind == "station_recovery" else run_episode(ep)
+
+
 # ------------------------------------------------------------------ the whole dataset
 def _git_commit() -> str:
     try:
@@ -402,10 +605,10 @@ def generate(episodes: int, seed: int, liquid: str, out_dir: Path, workers: int,
     if workers <= 1:
         _worker_init()
         for ep in eps:
-            rows.extend(run_episode(ep))
+            rows.extend(run_any_episode(ep))
     else:
         with ProcessPoolExecutor(max_workers=workers, initializer=_worker_init) as pool:
-            for chunk in pool.map(run_episode, eps, chunksize=16):
+            for chunk in pool.map(run_any_episode, eps, chunksize=16):
                 rows.extend(chunk)
     wall = time.time() - t0
 
@@ -444,6 +647,7 @@ def generate(episodes: int, seed: int, liquid: str, out_dir: Path, workers: int,
         "features": FEATURES,
         "ranges": RANGES,
         "request_mix": REQUEST_MIX,
+        "station": STATION,
         "csv": csv_path.name,
         "csv_sha256": hashlib.sha256(csv_path.read_bytes()).hexdigest(),
         "wall_s": round(wall, 1),

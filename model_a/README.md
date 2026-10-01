@@ -11,6 +11,8 @@ The pre-dose **context gate** (report Section 1.3). For every dose request that 
 2. **Physics rule.** Predict the pH after the dose with the planner's pH table (`sim/aspen_tables/`). If the rules below fire, HARMFUL.
 3. **Learned part.** A small gradient-boosted tree model scores what the rule can't see: probe lag, calibration offset, drifting or stuck probe, many small doses, a tank that responds differently than predicted. At or above the threshold, HARMFUL.
 
+**Training data (generator gen-2):** simulated episodes of normal operation, upsets with mixed requests, many small same-direction doses (held out for testing), and since 1 Oct **station-style recoveries**: the planner's doses sent exactly when the Pi station sends them (after the event is confirmed, once the reading settles, then each block dose 15 s after the last went in). Without those, Model A blocked correct recovery doses after big upsets, because the probe still lags when the next dose goes out.
+
 **The label rules (policy v1):** a dose is harmful if the settled pH:
 - (a) ends outside 5.5–9.5 (unless it's a partial recovery toward 7);
 - (b) moves an already abnormal tank more than 0.2 farther from 7;
@@ -31,7 +33,7 @@ On the Pi, `python3 -m venv .venv` is fine; the code needs Python 3.10 or newer.
 
 | Step | Command | Output |
 |---|---|---|
-| Dataset (about 20 s on a laptop) | `.venv/bin/python -m model_a.generate` | `model_a/data/`: dataset (CSV, gzipped), `manifest.json`, `DATASET_CARD.md` |
+| Dataset (about 45 s on a laptop) | `.venv/bin/python -m model_a.generate` | `model_a/data/`: dataset (CSV, gzipped), `manifest.json`, `DATASET_CARD.md` |
 | Train (under a minute) | `.venv/bin/python -m model_a.train` | `model_a/artifacts/`: `model_a.joblib`, `MODEL_CARD.md`, `evidence.json`, CSVs |
 | Tests | `.venv/bin/python -m model_a.tests.test_model_a` | 14 tests |
 | ICS-AT-03 timing | `.venv/bin/python -m model_a.latency_test --gateway-src <folder containing chemshield_gateway>` | `evidence/ICS/ICS-AT-03/...`: latency CSV, histogram, summary, machine info |

@@ -326,7 +326,7 @@ def model_card(ev: dict, same: pd.DataFrame, residual) -> str:
         f"{r.truth.replace('_CONTEXT', '')} | {r.model_a.replace('_CONTEXT', '')} ({r.score:.2f}) |"
         for r in same.itertuples())
     top = sorted(zip(FEATURES, residual.feature_importances_), key=lambda x: -x[1])[:5]
-    names = {"planner": "Planner (MILP) recovery doses", "rule_controller": "Naive controller doses",
+    names = {"planner": "Planner (MILP) recovery doses", "station_planner": "Planner doses as the Pi station sends them", "rule_controller": "Naive controller doses",
              "fine_correction": "Small fine corrections", "wrong_direction": "Wrong direction",
              "oversize": "Oversize bulk doses", "random": "Random doses"}
     type_md = "\n".join(

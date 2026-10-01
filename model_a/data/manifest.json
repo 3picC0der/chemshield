@@ -1,63 +1,66 @@
 {
-  "generator_version": "gen-1",
-  "created_utc": "2026-09-29T23:03:19+00:00",
-  "git_commit": "e108312",
+  "generator_version": "gen-2",
+  "created_utc": "2026-10-01T07:41:38+00:00",
+  "git_commit": "19fcd51",
   "seed": 261,
   "episodes": 3000,
-  "rows": 28974,
-  "valid_rows": 28716,
-  "invalid_rows": 258,
-  "harmful_fraction_valid": 0.3138,
+  "rows": 25578,
+  "valid_rows": 25360,
+  "invalid_rows": 218,
+  "harmful_fraction_valid": 0.3155,
   "by_episode_kind": {
-    "recovery": 17446,
-    "normal": 9549,
-    "cumulative": 1979
+    "recovery": 13840,
+    "normal": 8754,
+    "cumulative": 1959,
+    "station_recovery": 1025
   },
   "by_request_type": {
-    "rule_controller": 9004,
-    "random": 5855,
-    "wrong_direction": 4004,
-    "oversize": 3185,
-    "fine_correction": 2943,
-    "planner": 2004,
-    "cumulative_bias": 1979
+    "rule_controller": 7293,
+    "random": 4902,
+    "wrong_direction": 3279,
+    "oversize": 2779,
+    "fine_correction": 2687,
+    "cumulative_bias": 1959,
+    "planner": 1654,
+    "station_planner": 1025
   },
   "harmful_by_request_type": {
-    "cumulative_bias": 0.49,
+    "cumulative_bias": 0.484,
     "fine_correction": 0.0,
-    "oversize": 0.876,
+    "oversize": 0.867,
     "planner": 0.112,
-    "random": 0.447,
-    "rule_controller": 0.04,
-    "wrong_direction": 0.532
+    "random": 0.453,
+    "rule_controller": 0.043,
+    "station_planner": 0.192,
+    "wrong_direction": 0.547
   },
   "by_fault": {
-    "none": 19150,
-    "stuck": 2494,
-    "drift": 2453,
-    "gap": 1970,
-    "wrong_bottle": 1471,
-    "nostir": 1436
+    "none": 17387,
+    "drift": 2163,
+    "stuck": 2110,
+    "gap": 1575,
+    "wrong_bottle": 1234,
+    "nostir": 1109
   },
   "invalid_reasons": {
-    "STALE_SAMPLE": 176,
-    "INSUFFICIENT_DATA": 82
+    "STALE_SAMPLE": 140,
+    "INSUFFICIENT_DATA": 78
   },
   "label_rules_fired": {
-    "none": 19886,
-    "a,d": 5507,
-    "d": 1074,
-    "a": 801,
-    "a,b": 400,
-    "a,b,d": 349,
-    "b,d": 349,
-    "a,b,c,d": 318,
-    "c": 76,
-    "a,b,c": 75,
-    "a,c": 46,
-    "b,c,d": 44,
-    "b": 25,
-    "b,c": 16,
+    "none": 17510,
+    "a,d": 4809,
+    "d": 1002,
+    "a": 590,
+    "a,b": 368,
+    "a,b,d": 365,
+    "b,d": 339,
+    "a,b,c,d": 259,
+    "c": 126,
+    "a,b,c": 68,
+    "a,c": 44,
+    "b,c,d": 42,
+    "b": 33,
+    "b,c": 15,
     "c,d": 8
   },
   "liquid": "bicarb_1mM",
@@ -87,8 +90,9 @@
   ],
   "ranges": {
     "episode_kind_probs": {
-      "normal": 0.4,
-      "recovery": 0.5,
+      "normal": 0.35,
+      "recovery": 0.4,
+      "station_recovery": 0.15,
       "cumulative": 0.1
     },
     "fill_L": [
@@ -165,8 +169,22 @@
       "random": 0.2
     }
   },
+  "station": {
+    "band": [
+      6.0,
+      8.5
+    ],
+    "confirm_readings": 3,
+    "settle_range_pH": 0.15,
+    "settle_max_wait_s": 30.0,
+    "mix_s": 15.0,
+    "t_hold_s": 26.0,
+    "replan_after_block_s": 10.0,
+    "dwell_s": 60.0,
+    "nominal_volume_L": 5.0
+  },
   "csv": "modelA_dataset.csv.gz",
-  "csv_sha256": "e795013d0700ebef91773de3dd2e73b449a04878edc289a5a0b503e086ed5719",
-  "wall_s": 34.1,
+  "csv_sha256": "29c314c4c62991226974f0239a9a6b72cd7f929a9983093953408ec61ee9943f",
+  "wall_s": 40.4,
   "workers": 7
 }

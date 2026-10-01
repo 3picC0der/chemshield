@@ -153,13 +153,15 @@ USB serial, 115200 baud, one line per message ending in `\n`. This is I5 from
 
 ## Things to know
 
-- **Model A sometimes blocks a correct recovery dose after a big upset.** Over 20
-  simulated runs each: 7 mL acid (the INT-AT-01 demo) recovered 20/20, 40 mL acid 19/20,
-  80 mL base 17/20 and 80 mL acid (`acid_upset_max`) only 14/20. Every miss was Model A's
-  learned part (MODEL_RISK) blocking the planner's dose twice, which ends in OPERATOR
-  DECISION REQUIRED. The station re-reads and re-plans once before asking the operator;
-  HALT then RESUME lets the planner try again. For a live C3/S6 demo a 40 mL upset is the
-  safer choice until Model A is retrained on this recovery pattern.
+- **Model A sometimes blocks a correct recovery dose after a big upset.** After a big
+  upset the probe still lags when the next planner dose goes out, so the tank looks like it
+  responds less than predicted, and Model A's learned part (MODEL_RISK) reads that as risk.
+  Model A is now also trained on the station's own recovery doses (1 Oct). Over 60
+  simulated runs each (`recovery_check`, seeds 1000-1059): 7 mL acid (the INT-AT-01 demo)
+  60/60, 40 mL acid 56/60, 80 mL acid (`acid_upset_max`) 59/60 (was 43/60), 40 mL base
+  60/60 and 80 mL base 58/60. A miss ends in OPERATOR DECISION REQUIRED; HALT then RESUME
+  lets the planner try again. Model A also correctly blocked some planner doses that would
+  have overshot (for example 20 mL of base at pH 3.2, which would end at pH 9.9).
 - **The event closes** when the pH has stayed inside 6.0-8.5 for 60 s (`--dwell`).
 - **Hand-dose speed** (`--hand-speed`, mL/s) only sets how long the Uno's light stays on.
 - The pH table is still the PLACEHOLDER until CHE's Aspen file lands; the screen says which.
