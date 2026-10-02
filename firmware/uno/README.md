@@ -32,13 +32,14 @@ E-stop as pressed and refuses every dose (a loose wire fails safe).
 
 ## Flash it from the Pi
 
-```bash
-arduino-cli core install arduino:avr                     # once
-arduino-cli compile --fqbn arduino:avr:uno firmware/uno/chemshield_uno
-arduino-cli upload  --fqbn arduino:avr:uno -p /dev/ttyACM0 firmware/uno/chemshield_uno
-```
+Once: `sudo apt-get install -y --no-install-recommends arduino-mk arduino-core-avr gcc-avr avr-libc avrdude`.
+Then, with the station stopped (only one program can hold the serial port):
 
-Stop the station first: only one program can hold the serial port.
+```bash
+cd firmware/uno/chemshield_uno
+make            # compile (about 10 KB of the Uno's 32 KB)
+make upload     # load it onto the Uno on /dev/ttyACM0
+```
 
 ## Calibrate the probe (every morning, and before the demo)
 
