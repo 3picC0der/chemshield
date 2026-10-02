@@ -4,6 +4,9 @@
 BOARD_TAG = uno
 ARDUINO_LIBS = EEPROM
 MONITOR_PORT = /dev/ttyACM0
+# Debian's own avrdude and its config (the bundled path has no config file)
+AVRDUDE = /usr/bin/avrdude
+AVRDUDE_CONF = /etc/avrdude.conf
 include /usr/share/arduino/Arduino.mk
 # Debian avr-size has no --format=avr: give it the hex
 avr_size = $(SIZE) $(2)
