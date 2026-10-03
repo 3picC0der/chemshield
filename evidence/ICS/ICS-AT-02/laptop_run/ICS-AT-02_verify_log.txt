@@ -1,0 +1,3 @@
+evidence/ICS/ICS-AT-02/laptop_run/ICS-AT-02_audit.jsonl: 3103 records, chain unbroken
+commands: 3100 (ACCEPT 1, LOCKOUT 403, REPLAY 1000, STALE 1000, STATE 696)
+CHAIN OK

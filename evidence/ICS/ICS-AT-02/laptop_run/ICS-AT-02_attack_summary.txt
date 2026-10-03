@@ -1,0 +1,21 @@
+ICS-AT-02 (S3) laptop run, 2026-10-03 19:40 UTC: station on this laptop (simulated tank), the same gateway and Model A code as the Pi
+
+=== replay-now: 1000 commands in 1.6 s ===
+  REUSED_NONCE            1000   (REPLAY)
+  rejected as REPLAY: 1000   as STALE: 0   accepted: 0
+  forwarded to the Uno: 0
+  HMI counters, change during this run: REPLAY +1000, STALE +0, ACCEPT +1, TOTAL +2000
+  replayed/stale rejected: 1000/1000 = 100.00%  (S3 needs >= 99%)
+
+=== stale: 1000 commands in 0.9 s ===
+  STALE_TIMESTAMP         1000   (STALE)
+  rejected as REPLAY: 0   as STALE: 1000   accepted: 0
+  forwarded to the Uno: 0
+  HMI counters, change during this run: REPLAY +0, STALE +1000, ACCEPT +0, TOTAL +1000
+  replayed/stale rejected: 1000/1000 = 100.00%  (S3 needs >= 99%)
+
+=== stale: 100 commands in 0.1 s ===
+  MIXING_LOCKOUT           100   (LOCKOUT)
+  rejected as REPLAY: 0   as STALE: 0   accepted: 0
+  forwarded to the Uno: 0
+  HMI counters, change during this run: REPLAY +0, STALE +0, ACCEPT +0, TOTAL +100
