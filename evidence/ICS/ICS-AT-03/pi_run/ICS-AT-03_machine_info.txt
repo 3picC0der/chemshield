@@ -1,0 +1,8 @@
+recorded_utc: 2026-10-03T13:34:47+00:00
+device: Raspberry Pi 5 Model B Rev 1.1
+platform: Linux-6.18.50+rpt-rpi-2712-aarch64-with-glibc2.41
+machine: aarch64
+processor: n/a
+cpus: 4
+python: 3.13.5
+scikit-learn: 1.9.1
