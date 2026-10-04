@@ -33,13 +33,13 @@ case "${1:-}" in
       echo "== $(date -u '+%Y-%m-%d %H:%M:%S UTC') C2 network on"
       nmcli connection delete "$AP_CON" >/dev/null 2>&1 || true
       nmcli device wifi hotspot ifname wlan0 con-name "$AP_CON" ssid "$SSID" password "$PASS"
-      # the phone hotspot wins whenever it is in range; this one comes up when it is not
-      nmcli connection modify "$AP_CON" connection.autoconnect yes connection.autoconnect-priority -100
-      nmcli -t -f NAME,TYPE connection show | awk -F: -v ap="$AP_CON" '$2 ~ /wireless/ && $1 != ap {print $1}' |
-        while read -r con; do nmcli connection modify "$con" connection.autoconnect-priority 10 || true; done
       sleep 4
       CHEMSHIELD_OPERATOR_IFACE=wlan0 bash "$HERE/raspberry_pi_firewall_template.sh"
-      sleep 8          # NetworkManager can still be starting the Wi-Fi; apply it again to be sure
+      # the phone hotspot wins whenever it is in range; this one comes up when it is not
+      nmcli connection modify "$AP_CON" connection.autoconnect yes connection.autoconnect-priority -100 || true
+      nmcli -t -f NAME,TYPE connection show | awk -F: -v ap="$AP_CON" '$2 ~ /wireless/ && $1 != ap {print $1}' |
+        while read -r con; do nmcli connection modify "$con" connection.autoconnect-priority 10 || true; done
+      sleep 8          # NetworkManager can still be starting the Wi-Fi; apply the firewall again to be sure
       CHEMSHIELD_OPERATOR_IFACE=wlan0 bash "$HERE/raspberry_pi_firewall_template.sh"
       ip -4 -brief address show wlan0
     } >> "$LOG" 2>&1
