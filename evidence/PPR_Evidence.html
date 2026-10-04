@@ -180,7 +180,7 @@ html { scroll-behavior: smooth; }
         </tr>
         <tr>
           <td class="id">ICS</td>
-          <td><b>C2</b> gateway is the only path <br><span class="pill todo">To do on the Pi</span><br><span class="muted">script ready</span></td>
+          <td><b>C2</b> gateway is the only path <br><span class="pill pass">Proven on the Pi · 8 of 8 checks, twice</span></td>
           <td><b>S4</b> class and score within 3 s <br><span class="pill pass">Proven on the Pi · max 1.65 ms</span></td>
           <td><b>S3</b> replay/stale rejected <span class="pill pass">2,000 / 2,000</span></td>
         </tr>
@@ -252,20 +252,35 @@ html { scroll-behavior: smooth; }
   <div class="eyebrow">Industrial control systems security</div>
 
   <div class="item" id="c2">
-    <div class="item-head"><h3>C2 · The gateway is the only control path</h3><span class="tid">ICS-AT-01</span><span class="pill todo">To do on the Pi tomorrow</span></div>
+    <div class="item-head"><h3>C2 · The gateway is the only control path</h3><span class="tid">ICS-AT-01</span><span class="pill pass">Proven on the Raspberry Pi 5 · 8 of 8 checks, twice</span></div>
+    <div class="tiles">
+      <div class="tile"><b>22, 8000</b><span>the only open TCP ports (1,141 scanned)</span></div>
+      <div class="tile"><b>401 · 401 · 401</b><span>unsigned dose, wrong key, unsigned HALT</span></div>
+      <div class="tile"><b>publickey</b><span>the only SSH login the Pi offers</span></div>
+      <div class="tile"><b>0</b><span>IP forwarding; INPUT and FORWARD policy DROP</span></div>
+    </div>
     <div class="tablebox"><table class="sheet"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
       <thead><tr><th>No.</th><th>Constraint (full)</th><th>Test procedure</th><th>Achieved result / evidence</th></tr></thead>
       <tbody>
         <tr><td class="id" rowspan="7">C2</td><td class="spec" rowspan="7">All actuator commands must pass through the ChemShield gateway as the sole authorized control path during testing and demonstration.</td>
-          <td>1. Pi on its own Wi-Fi with the firewall on: <code>gateway/firewall/c2_network.sh on &lt;password&gt;</code>; laptop joins ChemShield-Lab.</td><td class="result">________</td></tr>
-        <tr><td>2. From the laptop: <code>nmap -Pn -p- 10.42.0.1</code>.</td><td class="result">Open ports ______ (expect 22, 8000)</td></tr>
-        <tr><td>3. On the Pi: routing off, <code>sysctl net.ipv4.ip_forward</code>.</td><td class="result">______ (expect 0)</td></tr>
-        <tr><td>4. HMI engineer panel: dose "unsigned" and "wrong key".</td><td class="result">Already covered by the automated tests (HTTP 401); live: ______</td></tr>
-        <tr><td>5. Password login: <code>ssh -o PubkeyAuthentication=no chemshield@10.42.0.1</code>.</td><td class="result">Refused? ______</td></tr>
-        <tr><td>6. The Uno has no network address; it is reachable only through the Pi's USB. Watch its light during steps 2–5.</td><td class="result">Light came on? ______</td></tr>
-        <tr class="verdict"><td>Pass if: only 22 and 8000 open, ip_forward 0, every bypass refused, light never on.</td><td>________</td></tr>
+          <td>1. Firewall on (<code>gateway/firewall/c2_network.sh</code>). Run 1 on the Pi over the phone hotspot (4 Oct 17:28 UTC); run 2 on the Pi's own Wi-Fi ChemShield-Lab (4 Oct 17:44 UTC). Then, from the Mac: <code>python -m hmi.c2_check --pi &lt;address&gt; --ssh-key ...</code></td><td class="result">Both runs: <strong>C2 PASS</strong>, 8 of 8 checks</td></tr>
+        <tr><td>2. Port scan (nmap): every well-known port plus MQTT, OPC UA, VNC, the 8000 range and industrial-protocol ports.</td><td class="result num">1,141 TCP ports in 59 s: open = <strong>22 and 8000 only</strong></td></tr>
+        <tr><td>3. Unsigned dose; dose signed with the wrong key; unsigned operator HALT; a body that is not a command.</td><td class="result num"><strong>401</strong> (MISSING_SIGNATURE) · <strong>401</strong> (INVALID_HMAC) · <strong>401</strong> · <strong>400</strong></td></tr>
+        <tr><td>4. Try a password login to the Pi over SSH.</td><td class="result">Server offers <strong>publickey</strong> only</td></tr>
+        <tr><td>5. On the Pi: IP forwarding and the firewall policies.</td><td class="result num"><strong>ip_forward = 0</strong>; INPUT policy <strong>DROP</strong>; FORWARD policy <strong>DROP</strong></td></tr>
+        <tr><td>6. The Uno has no network address; it hangs off the Pi's USB. Watch the accepted-dose counter and the dose light during the attempts.</td><td class="result num">Accepted doses 3 → 3; no dose pending; Uno light never on</td></tr>
+        <tr class="verdict"><td>Pass if: only 22 and 8000 open, ip_forward 0, every bypass refused, light never on.</td><td><span class="pill pass">Met</span></td></tr>
       </tbody></table></div>
-    <div class="live">Live: a quick scan (<code>nmap -Pn --top-ports 1000 10.42.0.1</code>, seconds) and the HMI's "unsigned" button returning 401.</div>
+    <div class="evidence single">
+      <div class="files">
+        <div class="eyebrow">Files · 4 Oct</div>
+        <ul>
+          <li><a href="ICS/ICS-AT-01/c2_phaseB_pi_own_wifi/ICS-AT-01_c2_check.txt">Run 2, the Pi's own Wi-Fi: ICS-AT-01_c2_check.txt</a> (and <a href="ICS/ICS-AT-01/c2_phaseB_pi_own_wifi/ICS-AT-01_c2_check.json">.json</a>)</li>
+          <li><a href="ICS/ICS-AT-01/c2_phaseA_phone_hotspot/ICS-AT-01_c2_check.txt">Run 1, phone hotspot: ICS-AT-01_c2_check.txt</a> (includes the raw nmap output and the Pi's firewall settings)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="live">Live: run <code>nmap -Pn --top-ports 1000 10.42.0.1</code> (about a minute) and press "unsigned" and "wrong key" on the HMI's engineer panel. The full check command takes about a minute and prints the PASS/FAIL table.</div>
   </div>
 
   <div class="item" id="s4">
@@ -498,7 +513,6 @@ html { scroll-behavior: smooth; }
     <li><b>C3</b>'s live total: needs a recovery on the 5 L tank with the planner's doses added by hand (INT-S1 itself is done). <span class="who">Belal</span></li>
     <li><b>S3</b> again from the laptop against the Pi over Wi-Fi. <span class="who">Belal, Khalid</span></li>
     <li><b>S1</b> 10-minute hold (extra for CHE). <span class="who">Abdulkarim</span></li>
-    <li><b>C2</b> last: the Pi's own Wi-Fi with the firewall, nmap, ip_forward, 401, password refused. The Mac has no internet during this step. <span class="who">Belal, Khalid</span></li>
     <li><b>C1</b>: approval scan, bottle-label photos, titration. <span class="who">Abdulkarim</span></li>
     <li><b>S7</b>: enter the three pump runs and attach the datasheet page. <span class="who">Abdulkarim</span></li>
     <li><b>S5</b>: SUS forms and the mean score, or present S6 as the ISE spec. <span class="who">Hattan</span></li>
