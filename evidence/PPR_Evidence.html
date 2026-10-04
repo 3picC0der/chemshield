@@ -180,7 +180,7 @@ html { scroll-behavior: smooth; }
         </tr>
         <tr>
           <td class="id">ICS</td>
-          <td><b>C2</b> gateway is the only path <br><span class="pill todo">To do on the Pi</span><br><span class="muted">script ready</span></td>
+          <td><b>C2</b> gateway is the only path <br><span class="pill warn">Live collector ready</span><br><span class="muted">real rig run required for PASS</span></td>
           <td><b>S4</b> class and score within 3 s <br><span class="pill pass">Proven on the Pi · max 1.65 ms</span></td>
           <td><b>S3</b> replay/stale rejected <span class="pill pass">2,000 / 2,000</span></td>
         </tr>
@@ -252,7 +252,7 @@ html { scroll-behavior: smooth; }
   <div class="eyebrow">Industrial control systems security</div>
 
   <div class="item" id="c2">
-    <div class="item-head"><h3>C2 · The gateway is the only control path</h3><span class="tid">ICS-AT-01</span><span class="pill todo">To do on the Pi tomorrow</span></div>
+    <div class="item-head"><h3>C2 · The gateway is the only control path</h3><span class="tid">ICS-AT-01</span><span class="pill warn">Live collector ready · run on the rig</span></div>
     <div class="tablebox"><table class="sheet"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
       <thead><tr><th>No.</th><th>Constraint (full)</th><th>Test procedure</th><th>Achieved result / evidence</th></tr></thead>
       <tbody>
@@ -261,11 +261,11 @@ html { scroll-behavior: smooth; }
         <tr><td>2. From the laptop: <code>nmap -Pn -p- 10.42.0.1</code>.</td><td class="result">Open ports ______ (expect 22, 8000)</td></tr>
         <tr><td>3. On the Pi: routing off, <code>sysctl net.ipv4.ip_forward</code>.</td><td class="result">______ (expect 0)</td></tr>
         <tr><td>4. HMI engineer panel: dose "unsigned" and "wrong key".</td><td class="result">Already covered by the automated tests (HTTP 401); live: ______</td></tr>
-        <tr><td>5. Password login: <code>ssh -o PubkeyAuthentication=no chemshield@10.42.0.1</code>.</td><td class="result">Refused? ______</td></tr>
+        <tr><td>5. Password login to the real Pi account: <code>ssh -o PubkeyAuthentication=no &lt;pi-user&gt;@10.42.0.1</code>; also verify <code>sshd -T</code> reports <code>passwordauthentication no</code>.</td><td class="result">Refused? ______ · passwordauthentication ______</td></tr>
         <tr><td>6. The Uno has no network address; it is reachable only through the Pi's USB. Watch its light during steps 2–5.</td><td class="result">Light came on? ______</td></tr>
         <tr class="verdict"><td>Pass if: only 22 and 8000 open, ip_forward 0, every bypass refused, light never on.</td><td>________</td></tr>
       </tbody></table></div>
-    <div class="live">Live: a quick scan (<code>nmap -Pn --top-ports 1000 10.42.0.1</code>, seconds) and the HMI's "unsigned" button returning 401.</div>
+    <div class="files"><div class="eyebrow">C2 evidence runner</div><ul><li><a href="ICS-AT-01/README.md">ICS-AT-01 runbook and visual checklist</a></li><li><a href="../hmi/c2_evidence.py">hmi/c2_evidence.py</a> · fills the live test sheet from measured results</li></ul></div><div class="live">Live: a quick scan (<code>nmap -Pn --top-ports 1000 10.42.0.1</code>, seconds) and the HMI's "unsigned" button returning 401. For the signed evidence run, execute <code>python -m hmi.c2_evidence --pi-ip 10.42.0.1 --ssh-user &lt;pi-user&gt;</code> without <code>--quick</code>.</div>
   </div>
 
   <div class="item" id="s4">
@@ -489,7 +489,7 @@ html { scroll-behavior: smooth; }
     <li><b>INT-S1</b> live on the rig, then <b>C3</b>'s live total from the same recovery. <span class="who">Belal</span></li>
     <li><b>S3</b> again from the laptop against the Pi over Wi-Fi. <span class="who">Belal, Khalid</span></li>
     <li><b>S1</b> 10-minute hold (extra for CHE). <span class="who">Abdulkarim</span></li>
-    <li><b>C2</b> last: the Pi's own Wi-Fi with the firewall, nmap, ip_forward, 401, password refused. The Mac has no internet during this step. <span class="who">Belal, Khalid</span></li>
+    <li><b>C2</b> last: the Pi's own Wi-Fi with the firewall, then run <code>python -m hmi.c2_evidence --pi-ip 10.42.0.1 --ssh-user &lt;pi-user&gt;</code>. Keep the generated test sheet, raw output, JSON and a video showing the Uno light stays off. The Mac has no internet during this step. <span class="who">Belal, Khalid</span></li>
     <li><b>C1</b>: approval scan, bottle-label photos, titration. <span class="who">Abdulkarim</span></li>
     <li><b>S7</b>: enter the three pump runs and attach the datasheet page. <span class="who">Abdulkarim</span></li>
     <li><b>S5</b>: SUS forms and the mean score, or present S6 as the ISE spec. <span class="who">Hattan</span></li>
