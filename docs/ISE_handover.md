@@ -1,3 +1,5 @@
+> **Moved (4 Oct):** the evidence files named below now live in one folder per spec under `evidence/`. Start at `evidence/README.md`. The old paths `evidence/ISE`, `evidence/INT` and the filled .docx sheets no longer exist.
+
 # ISE hand-in — Hattan, 28 Sep
 
 Section 3 of the PPR plan, the ISE rows. Everything here runs today with no hardware and

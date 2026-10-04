@@ -1,0 +1,10 @@
+# pytest -v hmi/tests/test_station.py::test_unsafe_event_switches_to_recovery_and_locks_the_uno hmi/tests/test_station.py::test_halt_blocks_every_dose_until_resume hmi/tests/test_station.py::test_lost_uno_link_halts_and_needs_an_operator_reset ; 2026-10-04 20:04 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+hmi/tests/test_station.py::test_unsafe_event_switches_to_recovery_and_locks_the_uno PASSED [ 33%]
+hmi/tests/test_station.py::test_halt_blocks_every_dose_until_resume PASSED [ 66%]
+hmi/tests/test_station.py::test_lost_uno_link_halts_and_needs_an_operator_reset PASSED [100%]
+
+hmi/tests/test_station.py::test_unsafe_event_switches_to_recovery_and_locks_the_uno
+
+========================= 3 passed, 1 warning in 1.77s =========================

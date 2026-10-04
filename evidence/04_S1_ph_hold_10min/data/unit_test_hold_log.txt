@@ -1,0 +1,8 @@
+# pytest -v hmi/tests/test_station.py::test_ten_minute_hold_log ; 2026-10-04 20:04 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+hmi/tests/test_station.py::test_ten_minute_hold_log PASSED               [100%]
+
+hmi/tests/test_station.py::test_ten_minute_hold_log
+
+========================= 1 passed, 1 warning in 4.77s =========================

@@ -1,0 +1,9 @@
+# pytest -v hmi/tests/test_station.py::test_unsigned_forged_replayed_and_stale_commands_are_rejected hmi/tests/test_station.py::test_a_copy_of_a_rejected_command_is_still_a_replay ; 2026-10-04 20:03 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+hmi/tests/test_station.py::test_unsigned_forged_replayed_and_stale_commands_are_rejected PASSED [ 50%]
+hmi/tests/test_station.py::test_a_copy_of_a_rejected_command_is_still_a_replay PASSED [100%]
+
+hmi/tests/test_station.py::test_unsigned_forged_replayed_and_stale_commands_are_rejected
+
+========================= 2 passed, 1 warning in 2.18s =========================

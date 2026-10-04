@@ -16,7 +16,7 @@ from chemshield_gateway.plots import plot_security_summary, plot_failsafe_summar
 
 
 def main() -> None:
-    evidence_dir = REPO_ROOT / "evidence" / "generated"
+    evidence_dir = REPO_ROOT / "evidence" / "_archive_gateway_in_process_tests_30Sep"
     plots_dir = evidence_dir / "plots"
     reports_dir = evidence_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)

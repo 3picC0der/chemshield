@@ -1,0 +1,13 @@
+# pytest -v gateway/tests/test_event_mmol.py hmi/tests/test_station.py::test_recovery_restores_ph_within_300_s_and_50_mmol hmi/tests/test_station.py::test_manual_dose_past_50_mmol_is_rejected_during_recovery ; 2026-10-04 20:03 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+gateway/tests/test_event_mmol.py::test_mmol_is_volume_times_molarity PASSED [ 12%]
+gateway/tests/test_event_mmol.py::test_50_mmol_per_event_ignoring_the_clients_number PASSED [ 25%]
+gateway/tests/test_event_mmol.py::test_bad_channels_and_volumes_rejected PASSED [ 37%]
+gateway/tests/test_event_mmol.py::test_audit_records_carry_channel_mmol_and_model_a PASSED [ 50%]
+gateway/tests/test_event_mmol.py::test_molarity_matches_the_planner PASSED [ 62%]
+gateway/tests/test_event_mmol.py::test_hmi_eleven_bulk_doses PASSED      [ 75%]
+hmi/tests/test_station.py::test_recovery_restores_ph_within_300_s_and_50_mmol PASSED [ 87%]
+hmi/tests/test_station.py::test_manual_dose_past_50_mmol_is_rejected_during_recovery PASSED [100%]
+
+============================== 8 passed in 1.81s ===============================

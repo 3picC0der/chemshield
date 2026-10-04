@@ -18,7 +18,7 @@ and when the station runs with `--ph-source sim`.
 | `hmi/` | The laptop HMI and the Pi "station" (gateway + Model A + planner + recovery + Uno link) | Belal (build) + Hattan (design) |
 | `firmware/uno/` | Arduino Uno sketch: pH reading, dose light, E-stop, heartbeat; calibration tool | Belal |
 | `docs/` | `interfaces.md`: the message formats between the parts. **Read this first.** | Everyone |
-| `evidence/` | Data, plots and summaries, by department and test ID (e.g. `evidence/ICS/ICS-AT-03/`) | Everyone |
+| `evidence/` | **Start at `evidence/README.md`.** One folder per spec or constraint: test sheet, raw data, plots and a code snapshot, plus the attainment table, the explanation doc and the setup and demo guide | Everyone |
 
 **How to run it:** `hmi/README.md` (laptop demo, the real rig, and each test sheet's steps).
 Tests: `.venv/bin/python -m pytest hmi/tests gateway/tests sim/tests model_a/tests -q`.

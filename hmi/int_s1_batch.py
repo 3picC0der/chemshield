@@ -1,6 +1,6 @@
 """INT-S1 over many events: time from "unsafe event confirmed" to "RECOVERY on the HMI".
 
-    .venv/bin/python -m hmi.int_s1_batch --events 100 --out evidence/INT/INT-AT-01/laptop_dry_run
+    .venv/bin/python -m hmi.int_s1_batch --events 100 --out evidence/09_INT-S1_recovery_mode_within_2s/data/laptop_dry_run
 
 Runs a real station (simulated tank) on this computer and a headless HMI client that
 polls the station the way the screen does (every 250 ms) and reports the moment it first
@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m hmi.int_s1_batch", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--events", type=int, default=100)
-    ap.add_argument("--out", default=str(ROOT / "evidence" / "INT" / "INT-AT-01" / "laptop_dry_run"))
+    ap.add_argument("--out", default=str(ROOT / "evidence" / "09_INT-S1_recovery_mode_within_2s" / "data" / "laptop_dry_run"))
     ap.add_argument("--poll", type=float, default=0.25, help="HMI poll period, s (the screen uses 0.25)")
     a = ap.parse_args(argv)
 

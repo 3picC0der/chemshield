@@ -1,0 +1,7 @@
+solution,role,molarity_mol_per_L,molar_mass_g_per_mol,density_g_per_mL,wt_percent,limit_wt_percent,within_limit
+HCl 0.5 M (ACID_BULK),"acid, bulk bottle of the system",0.5,36.46,1.007,1.8103,5.0,True
+HCl 0.05 M,acid used by hand in the tests (the lab bottle),0.05,36.46,1.0,0.1823,5.0,True
+HCl 0.005 M (ACID_FINE),"acid, fine bottle of the system",0.005,36.46,1.0,0.0182,5.0,True
+NaOH 0.5 M (BASE_BULK),"base, bulk bottle",0.5,40.0,1.019,1.9627,5.0,True
+NaOH 0.005 M (BASE_FINE),"base, fine bottle",0.005,40.0,1.0,0.02,5.0,True
+tank liquid: 0.420 g NaHCO3 in 5 L distilled water,the water being protected,0.001,84.01,1.0,0.0084,5.0,True

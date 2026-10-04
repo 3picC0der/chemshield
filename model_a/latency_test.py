@@ -1,7 +1,7 @@
 """ICS-AT-03 (S4): time 1,000 dose requests through the real gateway and Model A.
 
     python -m model_a.latency_test --gateway-src "<Khalid's gateway>/src"
-    python -m model_a.latency_test --n 1000 --out evidence/ICS/ICS-AT-03/pi_run
+    python -m model_a.latency_test --n 1000 --out evidence/06_S4_class_and_score_within_3s/data/pi_run
 
 Every request is signed and goes through Khalid's GatewayValidator.validate() with the
 real Model A plugged in (ModelAClient). Nothing is sent to the Uno: the gateway's
@@ -46,7 +46,7 @@ from .schema import CHANNELS, LABELS, UNCERTAIN
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-DEFAULT_OUT = REPO / "evidence" / "ICS" / "ICS-AT-03" / "laptop_dry_run"
+DEFAULT_OUT = REPO / "evidence" / "06_S4_class_and_score_within_3s" / "data" / "latency_run"
 LIMIT_MS = 3000.0
 
 SCENARIOS = {                  # weight, tank pH, (bottle, mL range), readings age

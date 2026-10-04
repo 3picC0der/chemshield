@@ -14,7 +14,7 @@ python -m redosing.qc.imr       ISE-AT-02_batch.csv --out ISE-AT-02_imr.png
 python -m redosing.qc.traces    INT-AT-02_batch.csv --out INT-AT-02_traces.png
 python -m redosing.qc.far_side  INT-AT-03_batch.csv --out INT-AT-03
 
-# everything at once, into evidence/
+# everything at once, into the per-spec folders under evidence/ (03_C3_..., EXTRA_S6_..., EXTRA_INT-S2_..., EXTRA_INT-S3_...)
 python -m redosing.run_all
 ```
 

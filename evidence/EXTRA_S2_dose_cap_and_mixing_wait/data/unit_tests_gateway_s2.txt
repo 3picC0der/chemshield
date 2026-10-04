@@ -1,0 +1,9 @@
+# pytest -v gateway/tests/test_mixing_lockout.py hmi/tests/test_station.py::test_dose_cap_lockout_and_one_dose_at_a_time ; 2026-10-04 20:03 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+gateway/tests/test_mixing_lockout.py::test_second_dose_waits_15_s PASSED [ 25%]
+gateway/tests/test_mixing_lockout.py::test_hmi_six_back_to_back_doses PASSED [ 50%]
+gateway/tests/test_mixing_lockout.py::test_attack_runner_bursts_meet_a_real_lockout PASSED [ 75%]
+hmi/tests/test_station.py::test_dose_cap_lockout_and_one_dose_at_a_time PASSED [100%]
+
+============================== 4 passed in 3.90s ===============================

@@ -17,7 +17,7 @@ Checks, each PASS / FAIL / SKIP:
   7  on the Pi: IP forwarding is 0 and the INPUT and FORWARD policies are DROP
   8  after all that, no dose was accepted and the Uno's light never turned on
 
-The report goes to --out (default evidence/ICS/ICS-AT-01/c2_check_<time>/).
+The report goes to --out (default evidence/02_C2_gateway_sole_control_path/data/c2_check_<time>/).
 """
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    out_dir = a.out or ROOT / "evidence" / "ICS" / "ICS-AT-01" / f"c2_check_{stamp}"
+    out_dir = a.out or ROOT / "evidence" / "02_C2_gateway_sole_control_path" / "data" / f"c2_check_{stamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
     base = f"http://{a.pi}:{a.port}"
     expected = {22, a.port}

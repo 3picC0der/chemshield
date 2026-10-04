@@ -114,7 +114,7 @@ DOSE_PENDING). The full list is `REASONS` in `common.py`.
 | **ISE-AT-03** (S5) | The five tasks: read pH; request 10 mL of bulk base; respond to the alarm (ACKNOWLEDGE); stop dosing (HALT DOSING); find the last rejected command (audit log → rejected only). The facilitator drives it with `python -m hmi.facilitator` (see the kit in `evidence/ISE/ISE-AT-03/`) | All on one screen, no tabs to hunt through |
 
 For the batch version of INT-S1: `python -m hmi.int_s1_batch --events 100` writes
-`evidence/INT/INT-AT-01/laptop_dry_run/` (confirmed → RECOVERY seen by the HMI, per event).
+`evidence/09_INT-S1_recovery_mode_within_2s/data/laptop_dry_run/` (confirmed → RECOVERY seen by the HMI, per event).
 
 ## Uno lines (what the firmware must speak)
 

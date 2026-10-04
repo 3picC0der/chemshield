@@ -1,0 +1,16 @@
+# pytest -v gateway/tests/test_firewall_template.py hmi/tests/test_c2_check.py hmi/tests/test_station.py::test_station_refuses_unsigned_http_requests ; 2026-10-04 20:03 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+gateway/tests/test_firewall_template.py::test_script_parses PASSED       [ 11%]
+gateway/tests/test_firewall_template.py::test_input_default_drop_after_the_accepts PASSED [ 22%]
+gateway/tests/test_firewall_template.py::test_ipv6_gets_the_same_rules PASSED [ 33%]
+gateway/tests/test_firewall_template.py::test_one_hmi_port_variable_shared_with_the_hmi PASSED [ 44%]
+gateway/tests/test_firewall_template.py::test_dry_run_usb_rig_keeps_dhcp_and_reaches_the_evidence PASSED [ 55%]
+gateway/tests/test_firewall_template.py::test_dry_run_tcp_link_keeps_the_owner_rule PASSED [ 66%]
+hmi/tests/test_c2_check.py::test_station_checks_pass_and_the_report_is_written PASSED [ 77%]
+hmi/tests/test_c2_check.py::test_an_extra_open_port_fails_the_scan PASSED [ 88%]
+hmi/tests/test_station.py::test_station_refuses_unsigned_http_requests PASSED [100%]
+
+hmi/tests/test_c2_check.py::test_station_checks_pass_and_the_report_is_written
+
+======================== 9 passed, 1 warning in 14.21s =========================

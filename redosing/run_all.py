@@ -3,8 +3,9 @@
     python -m redosing.run_all                    # 600 events, seed 261
     python -m redosing.run_all --events 100       # quick pass while developing
 
-Writes into evidence/ISE/... and evidence/INT/..., exactly the file names the test
-sheets ask for, and prints the numbers to copy onto the sheets.
+Writes the batch CSVs, the four figures and the summary JSON into the per-spec evidence
+folders (evidence/03_C3_..., EXTRA_S6_..., EXTRA_INT-S2_..., EXTRA_INT-S3_...; each gets
+its own copy of the batch), and prints the numbers to copy onto the test sheets.
 """
 from __future__ import annotations
 
@@ -18,8 +19,12 @@ import warnings
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EV = os.path.join(ROOT, "evidence")
 
-TARGETS = [("ISE", "ISE-AT-01"), ("ISE", "ISE-AT-02"),
-           ("INT", "INT-AT-02"), ("INT", "INT-AT-03")]
+# spec -> evidence folder. All four use the same 600-event batch.
+C3 = os.path.join(EV, "03_C3_max_50mmol_per_recovery")
+S6 = os.path.join(EV, "EXTRA_S6_recovery_within_300s")
+INT2 = os.path.join(EV, "EXTRA_INT-S2_ph_restored_within_5min")
+INT3 = os.path.join(EV, "EXTRA_INT-S3_no_far_side_excursion")
+FOLDERS = [C3, S6, INT2, INT3]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,29 +38,29 @@ def main(argv: list[str] | None = None) -> int:
         from sim import batch as B
         from redosing.qc import far_side, histogram, imr, traces
 
-        for dept, tid in TARGETS:
-            os.makedirs(os.path.join(EV, dept, tid), exist_ok=True)
+        for d in FOLDERS:
+            os.makedirs(os.path.join(d, "data"), exist_ok=True)
+            os.makedirs(os.path.join(d, "plots"), exist_ok=True)
 
-        first = os.path.join(EV, "ISE", "ISE-AT-01", "ISE-AT-01_batch.csv")
+        first = os.path.join(C3, "data", "batch_600_events.csv")
         s = B.run(events=a.events, seed=a.seed, out=first)
 
-        # the sheets all say "use the same 600-event batch"; give each folder its own copy
-        # so a grader opening one folder has everything that sheet refers to
+        # every sheet says "use the same 600-event batch"; give each folder its own copy
+        # so a reviewer who opens one folder has everything that sheet refers to
         src_t = os.path.splitext(first)[0] + "_traces.csv"
-        for dept, tid in TARGETS[1:]:
-            d = os.path.join(EV, dept, tid)
-            shutil.copy(first, os.path.join(d, f"{tid}_batch.csv"))
-            shutil.copy(src_t, os.path.join(d, f"{tid}_batch_traces.csv"))
+        for d in FOLDERS[1:]:
+            shutil.copy(first, os.path.join(d, "data", "batch_600_events.csv"))
+            shutil.copy(src_t, os.path.join(d, "data", "batch_600_events_traces.csv"))
 
-        p = lambda dept, tid, name: os.path.join(EV, dept, tid, name)  # noqa: E731
-        h = histogram.run(p("ISE", "ISE-AT-01", "ISE-AT-01_batch.csv"),
-                          p("ISE", "ISE-AT-01", "ISE-AT-01_histogram.png"))
-        i = imr.run(p("ISE", "ISE-AT-02", "ISE-AT-02_batch.csv"),
-                    p("ISE", "ISE-AT-02", "ISE-AT-02_imr.png"))
-        t = traces.run(p("INT", "INT-AT-02", "INT-AT-02_batch.csv"),
-                       p("INT", "INT-AT-02", "INT-AT-02_traces.png"))
-        f = far_side.run(p("INT", "INT-AT-03", "INT-AT-03_batch.csv"),
-                         p("INT", "INT-AT-03", "INT-AT-03"))
+        batch = lambda d: os.path.join(d, "data", "batch_600_events.csv")  # noqa: E731
+        h = histogram.run(batch(C3), os.path.join(C3, "plots", "C3_reagent_per_event_histogram.png"))
+        i = imr.run(batch(S6), os.path.join(S6, "plots", "S6_recovery_time_control_chart.png"))
+        t = traces.run(batch(INT2), os.path.join(INT2, "plots", "INT-S2_all_recovery_traces.png"))
+        f = far_side.run(batch(INT3), os.path.join(INT3, "data", "INT-S3"))
+        # far_side writes its figure next to the table; the figure belongs in plots/
+        worst = os.path.join(INT3, "data", "INT-S3_worst_case.png")
+        if os.path.exists(worst):
+            shutil.move(worst, os.path.join(INT3, "plots", "INT-S3_worst_case.png"))
 
     summary = {
         "events": s["events"], "seed": s["seed"], "chem_source": s["chem_source"],
@@ -78,9 +83,10 @@ def main(argv: list[str] | None = None) -> int:
         "imr_out_of_control": i["n_out_of_control"],
         "reagent_overhead_pct": round(h["overhead_pct"], 3),
     }
-    out = os.path.join(EV, "ISE", "ISE_evidence_summary.json")
-    with open(out, "w", encoding="utf-8") as fh:
-        json.dump(summary, fh, indent=2)
+    out = os.path.join(C3, "data", "batch_summary_all_numbers.json")
+    for d in FOLDERS:
+        with open(os.path.join(d, "data", "batch_summary_all_numbers.json"), "w", encoding="utf-8") as fh:
+            json.dump(summary, fh, indent=2)
 
     print("\n" + "=" * 72)
     print("NUMBERS FOR THE TEST SHEETS")

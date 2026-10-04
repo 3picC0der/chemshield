@@ -1,0 +1,25 @@
+# pytest -v model_a/tests hmi/tests/test_station.py::test_model_a_classifies_and_blocks_an_unsafe_dose ; 2026-10-04 20:04 UTC; commit d10c2de (+ the evidence reorganisation)
+============================= test session starts ==============================
+
+model_a/tests/test_model_a.py::test_truth_known_answers PASSED           [  5%]
+model_a/tests/test_model_a.py::test_prediction_round_trip_on_the_loaded_table PASSED [ 11%]
+model_a/tests/test_model_a.py::test_window_stats_on_a_ramp PASSED        [ 17%]
+model_a/tests/test_model_a.py::test_feature_problems_fail_closed PASSED  [ 23%]
+model_a/tests/test_model_a.py::test_dose_log_features PASSED             [ 29%]
+model_a/tests/test_model_a.py::test_label_rules PASSED                   [ 35%]
+model_a/tests/test_model_a.py::test_missing_model_file_is_uncertain_not_a_crash PASSED [ 41%]
+model_a/tests/test_model_a.py::test_i3_answers PASSED                    [ 47%]
+model_a/tests/test_model_a.py::test_recovery_dose_is_accepted PASSED     [ 52%]
+model_a/tests/test_model_a.py::test_stale_probe_and_legacy_command_are_uncertain PASSED [ 58%]
+model_a/tests/test_model_a.py::test_timeout_gives_uncertain_within_the_deadline PASSED [ 64%]
+model_a/tests/test_model_a.py::test_far_outside_training_is_uncertain PASSED [ 70%]
+model_a/tests/test_model_a.py::test_dose_added_feeds_the_dose_log PASSED [ 76%]
+model_a/tests/test_model_a.py::test_judges_the_same_dose_the_gateway_checks PASSED [ 82%]
+model_a/tests/test_model_a.py::test_through_khalids_gateway PASSED       [ 88%]
+model_a/tests/test_model_a.py::test_generator_smoke PASSED               [ 94%]
+hmi/tests/test_station.py::test_model_a_classifies_and_blocks_an_unsafe_dose PASSED [100%]
+
+model_a/tests/test_model_a.py::test_prediction_round_trip_on_the_loaded_table
+    excess_now = chem.excess_from_ph(ph_now, temp_c, volume_L)        # base-positive mmol
+
+======================== 17 passed, 1 warning in 2.16s =========================
