@@ -51,7 +51,7 @@ def station_port():
 
 
 def test_station_checks_pass_and_the_report_is_written(station_port, tmp_path, monkeypatch):
-    monkeypatch.setattr(c2_check, "scan_ports", lambda host, log: ({22, station_port}, "stub"))
+    monkeypatch.setattr(c2_check, "scan_ports", lambda host, log, full=False: ({22, station_port}, "stub"))
     c2_check.main(["--pi", "127.0.0.1", "--port", str(station_port), "--out", str(tmp_path)])
     report = json.loads((tmp_path / "ICS-AT-01_c2_check.json").read_text(encoding="utf-8"))
     status = {r["check"]: r["status"] for r in report["results"]}
@@ -60,7 +60,7 @@ def test_station_checks_pass_and_the_report_is_written(station_port, tmp_path, m
 
 
 def test_an_extra_open_port_fails_the_scan(station_port, tmp_path, monkeypatch):
-    monkeypatch.setattr(c2_check, "scan_ports", lambda host, log: ({22, station_port, 502}, "stub"))
+    monkeypatch.setattr(c2_check, "scan_ports", lambda host, log, full=False: ({22, station_port, 502}, "stub"))
     rc = c2_check.main(["--pi", "127.0.0.1", "--port", str(station_port), "--out", str(tmp_path)])
     report = json.loads((tmp_path / "ICS-AT-01_c2_check.json").read_text(encoding="utf-8"))
     assert report["results"][0]["status"] == "FAIL" and rc == 1

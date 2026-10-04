@@ -4,8 +4,7 @@ and show that only the gateway works.
     .venv/bin/python -m hmi.c2_check --pi 10.42.0.1 --ssh-key ~/.ssh/id_ed25519_second
 
 Needs the station running on the Pi (so port 8000 is open to find) and nmap on this laptop
-(`brew install nmap`; without it a slower Python connect scan of ports 1-1024 and a few
-well-known ones is used). The ssh key is only for reading the Pi's routing and firewall
+(`brew install nmap`; without it a slower Python connect scan of the same ports is used). The ssh key is only for reading the Pi's routing and firewall
 settings (check 7); without --ssh-key that check is skipped.
 
 Checks, each PASS / FAIL / SKIP:
@@ -39,7 +38,10 @@ from pathlib import Path
 from hmi.common import ROOT, STATION_PORT, gateway_config, new_dose_command
 
 EXPECTED_OPEN = {22, STATION_PORT}
-EXTRA_PORTS = [1883, 1884, 2222, 3000, 4840, 5000, 5353, 5900, 8000, 8001, 8080, 8081, 8443, 8883, 9100, 9101, 9000]
+# Every well-known port, plus where an actuator or a second web service could be listening:
+# MQTT, OPC UA, VNC, the 8000 range, Modbus-style and EtherNet/IP ports. About 1,150 ports,
+# about a minute. (--full scans all 65,535: much slower behind a DROP firewall.)
+SCAN_PORTS = "1-1024,1883,1884,2222,3000,4840,5000-5002,5353,5900,8000-8100,8443,8883,9000,9100,44818,47808"
 
 
 def http(url: str, body: bytes | None = None, timeout: float = 8.0) -> tuple[int, dict]:
@@ -56,15 +58,26 @@ def http(url: str, body: bytes | None = None, timeout: float = 8.0) -> tuple[int
             return e.code, {"raw": raw.decode(errors="replace")[:200]}
 
 
-def scan_ports(host: str, log: list[str]) -> tuple[set[int], str]:
+def _port_list() -> list[int]:
+    ports: set[int] = set()
+    for part in SCAN_PORTS.split(","):
+        lo, _, hi = part.partition("-")
+        ports.update(range(int(lo), int(hi or lo) + 1))
+    return sorted(ports)
+
+
+def scan_ports(host: str, log: list[str], full: bool = False) -> tuple[set[int], str]:
     """Open TCP ports on the host, and which scanner found them."""
+    ports = _port_list()
     if shutil.which("nmap"):
-        cmd = ["nmap", "-Pn", "-p-", "--min-rate", "2000", "-T4", "--max-retries", "1", "-oG", "-", host]
+        spec = "-" if full else SCAN_PORTS
+        cmd = ["nmap", "-Pn", "-p", spec, "-T4", "--max-retries", "1"] + (["--min-rate", "2000"] if full else []) \
+            + ["-oG", "-", host]
         log.append("$ " + " ".join(cmd))
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=600).stdout
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=3600 if full else 900).stdout
         log.append(out.strip())
-        return {int(p) for p in re.findall(r"(\d+)/open/tcp", out)}, "nmap, all 65535 TCP ports"
-    ports = sorted(set(range(1, 1025)) | set(EXTRA_PORTS))
+        what = "all 65535 TCP ports" if full else f"{len(ports)} TCP ports"
+        return {int(p) for p in re.findall(r"(\d+)/open/tcp", out)}, f"nmap, {what}"
 
     def probe(port: int) -> int | None:
         try:
@@ -93,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--port", type=int, default=STATION_PORT)
     ap.add_argument("--ssh-user", default="chemshield")
     ap.add_argument("--ssh-key", help="private key for reading the Pi's settings (check 7)")
+    ap.add_argument("--full", action="store_true", help="scan all 65,535 ports (needs nmap; slow)")
     ap.add_argument("--out", type=Path, help="report folder")
     a = ap.parse_args(argv)
 
@@ -118,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # 1 ----------------------------------------------------------------------------------
     t0 = time.time()
-    open_ports, how = scan_ports(a.pi, log)
+    open_ports, how = scan_ports(a.pi, log, a.full)
     ok = open_ports == expected
     record(1, "port scan", "PASS" if ok else "FAIL",
            f"open TCP ports {sorted(open_ports)} (expected {sorted(expected)}); {how}; {time.time() - t0:.0f} s")
