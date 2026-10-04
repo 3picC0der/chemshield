@@ -1,0 +1,57 @@
+{
+  "test": "ICS-AT-01 (C2)",
+  "run_utc": "2026-10-04T17:44:59+00:00",
+  "target": "10.42.0.1",
+  "station_port": 8000,
+  "results": [
+    {
+      "check": 1,
+      "name": "port scan",
+      "status": "PASS",
+      "detail": "open TCP ports [22, 8000] (expected [22, 8000]); nmap, 1141 TCP ports; 59 s"
+    },
+    {
+      "check": 2,
+      "name": "unsigned dose",
+      "status": "PASS",
+      "detail": "HTTP 401, MISSING_SIGNATURE"
+    },
+    {
+      "check": 3,
+      "name": "dose signed with the wrong key",
+      "status": "PASS",
+      "detail": "HTTP 401, INVALID_HMAC"
+    },
+    {
+      "check": 4,
+      "name": "unsigned operator action (HALT)",
+      "status": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "check": 5,
+      "name": "body that is not a command",
+      "status": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "check": 6,
+      "name": "SSH password login",
+      "status": "PASS",
+      "detail": "server offers: publickey"
+    },
+    {
+      "check": 7,
+      "name": "routing and firewall on the Pi",
+      "status": "PASS",
+      "detail": "ip_forward=0; -P INPUT DROP; -P FORWARD DROP"
+    },
+    {
+      "check": 8,
+      "name": "nothing reached the Uno",
+      "status": "PASS",
+      "detail": "accepted doses 3 to 3; dose pending: False; Uno light: locked"
+    }
+  ],
+  "verdict": "C2 PASS: only the gateway path works"
+}
