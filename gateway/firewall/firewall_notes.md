@@ -33,10 +33,20 @@ Goal: support **C2** by making the Raspberry Pi ChemShield gateway the only auth
   `ACTUATOR_IFACE`, `ACTUATOR_IP`, `PLC_OR_UNO_PORT` and an existing `GATEWAY_USER`. With
   the default (`usb`) that rule is skipped.
 
-## Evidence to collect later
+## C2 evidence collection
 
-- Screenshot of `sysctl net.ipv4.ip_forward` showing `0`.
-- Firewall rule list.
-- `nmap` from a separate laptop showing only TCP 22 and the HMI port (8000) open (every
-  other port filtered).
-- Failed direct actuator connection attempt.
+Use the live collector from the **separate operator laptop** after the station and C2
+network are up:
+
+```bash
+.venv/bin/python -m hmi.c2_evidence --pi-ip 10.42.0.1 --ssh-user <real-pi-user>
+```
+
+It records the full TCP nmap scan, `ip_forward`, effective SSH password-auth setting,
+the unsigned/wrong-key HTTP 401 rejections, the post-test station state, and the
+password-only SSH refusal. It then generates the filled ICS-AT-01 test sheet under
+`evidence/ICS-AT-01/live_run/`.
+
+Also keep a short video showing the Uno light stays off while the unsigned and wrong-key
+requests are rejected. That physical observation complements the machine-readable
+`pending = null` / actuator-state evidence.
