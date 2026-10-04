@@ -26,8 +26,8 @@ ax.set_ylim(0, 1150)
 ax.set_ylabel("commands")
 fresh = cnt["ACCEPTED"] + cnt["DOSE_PENDING"] + cnt["MIXING_LOCKOUT"]
 ax.set_title(f"S3, 3 Oct: {replay + stale} of 2000 replayed or stale commands rejected (100%)", fontsize=11, fontweight="bold")
-fig.text(0.5, 0.012, f"The {fresh} fresh commands sent alongside were never called replayed or stale; the gateway held them\n"
-         "with its other rules (15 s lockout, one dose at a time).", ha="center", fontsize=8.5, color="#444444")
+fig.text(0.5, 0.012, f"The {fresh} fresh commands sent alongside were never called replayed or stale: {cnt['ACCEPTED']} was accepted, the other\n"
+         f"{fresh - cnt['ACCEPTED']} were held by the gateway's other rules (15 s lockout, one dose at a time).", ha="center", fontsize=8.5, color="#444444")
 ax.grid(axis="y", alpha=0.25)
 fig.tight_layout(rect=(0, 0.06, 1, 1))
 out = os.path.join(HERE, "..", "plots", "S3_attack_results.png")

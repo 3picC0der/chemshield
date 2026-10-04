@@ -1,0 +1,190 @@
+{
+  "generator_version": "gen-2",
+  "created_utc": "2026-10-01T07:41:38+00:00",
+  "git_commit": "19fcd51",
+  "seed": 261,
+  "episodes": 3000,
+  "rows": 25578,
+  "valid_rows": 25360,
+  "invalid_rows": 218,
+  "harmful_fraction_valid": 0.3155,
+  "by_episode_kind": {
+    "recovery": 13840,
+    "normal": 8754,
+    "cumulative": 1959,
+    "station_recovery": 1025
+  },
+  "by_request_type": {
+    "rule_controller": 7293,
+    "random": 4902,
+    "wrong_direction": 3279,
+    "oversize": 2779,
+    "fine_correction": 2687,
+    "cumulative_bias": 1959,
+    "planner": 1654,
+    "station_planner": 1025
+  },
+  "harmful_by_request_type": {
+    "cumulative_bias": 0.484,
+    "fine_correction": 0.0,
+    "oversize": 0.867,
+    "planner": 0.112,
+    "random": 0.453,
+    "rule_controller": 0.043,
+    "station_planner": 0.192,
+    "wrong_direction": 0.547
+  },
+  "by_fault": {
+    "none": 17387,
+    "drift": 2163,
+    "stuck": 2110,
+    "gap": 1575,
+    "wrong_bottle": 1234,
+    "nostir": 1109
+  },
+  "invalid_reasons": {
+    "STALE_SAMPLE": 140,
+    "INSUFFICIENT_DATA": 78
+  },
+  "label_rules_fired": {
+    "none": 17510,
+    "a,d": 4809,
+    "d": 1002,
+    "a": 590,
+    "a,b": 368,
+    "a,b,d": 365,
+    "b,d": 339,
+    "a,b,c,d": 259,
+    "c": 126,
+    "a,b,c": 68,
+    "a,c": 44,
+    "b,c,d": 42,
+    "b": 33,
+    "b,c": 15,
+    "c,d": 8
+  },
+  "liquid": "bicarb_1mM",
+  "chem_source": "PLACEHOLDER",
+  "chem_table_files": [
+    "placeholder_nahco3_ph_table.csv"
+  ],
+  "label_policy_version": "v1",
+  "feature_schema_version": "fs-1",
+  "features": [
+    "ph_mean_5s",
+    "ph_slope_5s",
+    "ph_curvature_5s",
+    "ph_std_5s",
+    "sample_age_s",
+    "candidate_direction",
+    "candidate_mmol",
+    "predicted_post_ph",
+    "predicted_safety_margin",
+    "cumulative_signed_mmol",
+    "cumulative_abs_mmol",
+    "request_delivery_residual",
+    "measured_predicted_residual",
+    "mixer_speed_ratio",
+    "level_margin_l",
+    "heartbeat_age_s"
+  ],
+  "ranges": {
+    "episode_kind_probs": {
+      "normal": 0.35,
+      "recovery": 0.4,
+      "station_recovery": 0.15,
+      "cumulative": 0.1
+    },
+    "fill_L": [
+      4.8,
+      5.2
+    ],
+    "baking_soda_factor": [
+      0.95,
+      1.05
+    ],
+    "start_ph_normal": [
+      6.0,
+      8.5
+    ],
+    "start_ph_cumulative": [
+      6.5,
+      7.8
+    ],
+    "upset_ml_0.5M": [
+      2.0,
+      80.0
+    ],
+    "upset_acid_fraction": 0.6,
+    "probe_offset_sd": 0.05,
+    "probe_noise_sd": [
+      0.005,
+      0.04
+    ],
+    "probe_lag_tau_s": [
+      3.0,
+      20.0
+    ],
+    "hand_dose_bias_sd": 0.03,
+    "hand_dose_noise_sd": 0.02,
+    "hand_delay_s": [
+      2.0,
+      8.0
+    ],
+    "request_gap_s": [
+      15.0,
+      60.0
+    ],
+    "fault_probability": 0.35,
+    "fault_probs": {
+      "stuck": 0.25,
+      "drift": 0.25,
+      "gap": 0.2,
+      "nostir": 0.15,
+      "wrong_bottle": 0.15
+    },
+    "drift_rate_pH_per_s": [
+      0.002,
+      0.01
+    ],
+    "drift_max_pH": 1.5,
+    "gap_s": [
+      3.0,
+      25.0
+    ]
+  },
+  "request_mix": {
+    "NORMAL": {
+      "fine_correction": 0.3,
+      "rule_controller": 0.15,
+      "wrong_direction": 0.15,
+      "oversize": 0.15,
+      "random": 0.25
+    },
+    "RECOVERY": {
+      "planner": 0.4,
+      "rule_controller": 0.15,
+      "wrong_direction": 0.15,
+      "oversize": 0.1,
+      "random": 0.2
+    }
+  },
+  "station": {
+    "band": [
+      6.0,
+      8.5
+    ],
+    "confirm_readings": 3,
+    "settle_range_pH": 0.15,
+    "settle_max_wait_s": 30.0,
+    "mix_s": 15.0,
+    "t_hold_s": 26.0,
+    "replan_after_block_s": 10.0,
+    "dwell_s": 60.0,
+    "nominal_volume_L": 5.0
+  },
+  "csv": "modelA_dataset.csv.gz",
+  "csv_sha256": "29c314c4c62991226974f0239a9a6b72cd7f929a9983093953408ec61ee9943f",
+  "wall_s": 40.4,
+  "workers": 7
+}
