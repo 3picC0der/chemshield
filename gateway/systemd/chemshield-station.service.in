@@ -1,0 +1,18 @@
+# The ChemShield station at boot: gateway, Model A, planner, audit log and the Uno link.
+# Rendered and installed by install.sh. It does not start without the operator key.
+[Unit]
+Description=ChemShield station (gateway, Model A, planner, audit log, Uno link)
+ConditionPathExists=@REPO@/hmi/secrets/operator.key
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@REPO@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@REPO@/.venv/bin/python -W ignore -m hmi.station --ph-source uno
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -71,7 +71,7 @@ Check it and fit Model A to this Pi:
 .venv/bin/python -W ignore -m model_a.train          # retrain Model A here so its file matches this Pi's scikit-learn
 ```
 
-`pytest` runs the project's automatic tests (63 passed on the Mac on 4 Oct, in about 20 s). `model_a.train` rebuilds `model_a/artifacts/model_a.joblib` from the dataset in the repository; it makes `git` see that file as modified, which is harmless (see H for updating the code later).
+`pytest` runs the project's automatic tests (72 passed on the Mac, in about 40 s). `model_a.train` rebuilds `model_a/artifacts/model_a.joblib` from the dataset in the repository; it makes `git` see that file as modified, which is harmless (see H for updating the code later).
 
 ### A5. Give the Pi and the Mac the same operator key (on the Mac)
 
@@ -114,7 +114,7 @@ Never use D0 or D1 (they carry the USB data). The Uno's built-in "L" light (pin 
 sudo apt-get install -y --no-install-recommends arduino-mk arduino-core-avr gcc-avr avr-libc avrdude   # the AVR compiler and uploader
 cd ~/chemshield/firmware/uno/chemshield_uno
 make            # compiles the sketch (about 10 KB of the Uno's 32 KB)
-make upload     # sends it to the Uno over USB (the station must not be running)
+make upload     # sends it to the Uno over USB (the station must not be running; with auto-start: sudo systemctl stop chemshield-station first)
 cd ~/chemshield
 .venv/bin/python firmware/uno/uno_tool.py watch      # prints the pH and volts every second; Ctrl+C to stop
 ```
@@ -123,7 +123,7 @@ cd ~/chemshield
 
 ### A8. Calibrate the probe (on the Pi, station stopped)
 
-Do this every morning and again just before the demo. Rinse the probe in distilled water and blot it between buffers; use the value printed on each bottle.
+With auto-start installed (D6), run `sudo systemctl stop chemshield-station` first and `sudo systemctl start chemshield-station` afterwards. Do this every morning and again just before the demo. Rinse the probe in distilled water and blot it between buffers; use the value printed on each bottle.
 
 ```bash
 cd ~/chemshield
@@ -213,7 +213,7 @@ Over SSH on the Pi: `sudo nmcli -s -g 802-11-wireless-security.psk connection sh
 
 ## D. Start the system
 
-The same five steps every time the rig is powered up. In demo mode the Pi is `10.42.0.1`.
+The same five steps every time the rig is powered up. In demo mode the Pi is `10.42.0.1`. With auto-start installed (D6) the Pi does D2 by itself.
 
 ### D1. Power on and connect
 
@@ -222,6 +222,8 @@ The same five steps every time the rig is powered up. In demo mode the Pi is `10
 3. Check the Uno is plugged into the Pi and the probe is in the pH 7 buffer or the tank.
 
 ### D2. On the Pi: firewall and station
+
+*Skip this step if auto-start is installed (D6): the Pi did it at boot.*
 
 ```bash
 ssh -i $KEY -o IdentitiesOnly=yes chemshield@10.42.0.1      # log in (from the Mac)
@@ -265,9 +267,33 @@ This starts the HMI server on your laptop only (`127.0.0.1:8080`) and opens it i
 
 In the pH 7 buffer the reading should be 7.0 within 0.1. If not, calibrate (A8, with the station stopped).
 
-**To stop everything.** HMI: Ctrl+C in its terminal. Station: over SSH, `pkill -f hmi.station`. Pi: `sudo shutdown now`, then wait for the green light to stop flashing before unplugging it.
+**To stop everything.** HMI: Ctrl+C in its terminal. Station: over SSH, `pkill -f hmi.station` (with auto-start: `sudo systemctl stop chemshield-station`). Pi: `sudo shutdown now`, then wait for the green light to stop flashing before unplugging it.
 
-*Optional, not set up:* a systemd service could run D2's firewall and station commands at boot. Until it exists, do D2 by hand.
+### D6. Start by itself at power-up (optional)
+
+*Status: the files are in the repository and tested against stubs. They are **not installed on the Pi yet**; until they are, do D2 by hand.* Install them once, with the Pi on the phone hotspot and the Mac on it too:
+
+```bash
+ssh -i $KEY -o IdentitiesOnly=yes chemshield@<pi-address>        # the phone-hotspot address (A2)
+cd ~/chemshield
+git fetch origin main && git checkout origin/main -- gateway/systemd gateway/firewall   # the new files (not git pull: the Pi's copy has local changes)
+sudo bash gateway/systemd/install.sh                             # install, enable and start both services
+bash gateway/systemd/install.sh status                           # check: both enabled and active, IP forwarding 0, INPUT policy DROP, ports 22 and 8000
+```
+
+The installer writes `chemshield-firewall.service` and `chemshield-station.service` into `/etc/systemd/system` (filling in the repository path and your user), checks them with `systemd-analyze verify`, stops a station you started by hand, enables both so that they start at every boot, starts them now and prints the status. At every boot the firewall service applies the C2 rules at once, again when the Wi-Fi is up, and keeps IP forwarding at 0 for two more minutes; the station service starts the station with the real probe, restarts it if it stops, and does not start without the operator key. Details: `gateway/systemd/README.md`.
+
+With auto-start the start-up is: power the Pi (D1), set its clock from the Mac (D3), start the HMI (D4), check the screen (D5). The clock cannot be automated: in the demo network the Pi has no internet time, and the gateway rejects anything more than 2 s off.
+
+| You want (on the Pi) | Command |
+|---|---|
+| See that it is running | `bash gateway/systemd/install.sh status` |
+| Follow the station's messages | `journalctl -u chemshield-station -f` |
+| Restart the station (new log folder; replaces E1's `pkill`) | `sudo systemctl restart chemshield-station` |
+| Stop it for `make upload` or `uno_tool.py cal` (they need the serial port), then start it again | `sudo systemctl stop chemshield-station` … `sudo systemctl start chemshield-station` |
+| Go back to starting by hand | `sudo bash gateway/systemd/install.sh remove` |
+
+**Check the first cold start once, after installing** (this also shows that the Pi brings up `ChemShield-Lab` by itself): switch the phone's hotspot off, unplug the Pi, wait 10 s, plug it in, wait 3 minutes, join the Mac to `ChemShield-Lab`, then `curl -s -m 5 http://10.42.0.1:8000/api/state` should print the station's state, and `ssh -i $KEY -o IdentitiesOnly=yes chemshield@10.42.0.1 'bash ~/chemshield/gateway/systemd/install.sh status'` should show both services active, IP forwarding 0 and INPUT policy DROP.
 
 ---
 
@@ -283,6 +309,7 @@ Each start of the station opens a new log folder and a new hash chain, which is 
    cd ~/chemshield
    nohup .venv/bin/python -W ignore -m hmi.station --ph-source uno > ~/station.log 2>&1 < /dev/null &
    ```
+   With auto-start installed (D6) it is one line instead: `sudo systemctl restart chemshield-station`.
 2. Reload the HMI page in the browser (no need to restart the HMI).
 3. Put the tank back: rinse the probe in distilled water, blot it, and use a **fresh cup of pH 7 buffer**; for the 5 L tank, see the note below.
 4. Wait for the banner to say NORMAL with the pH inside 6.0 to 8.5.
@@ -398,6 +425,7 @@ The script, the task card and the scoring are in `07_S5_sus_at_least_80/SUS_stud
 | The Uno's light never comes on for an accepted dose | The Uno is locked (slow blink = RECOVERY) or not running the sketch | Check the light pattern; redo A7 |
 | Audit log shows "Uno lost the heartbeat" every few seconds to minutes | Not explained yet; it did not change any test result | Note it; it can briefly turn the light off |
 | `git pull` on the Pi refuses ("local changes") | `model_a/artifacts` was retrained on the Pi (A4) | On the Pi: `git fetch origin main && git reset --hard origin/main`, then retrain Model A (A4). `hmi/secrets/` and `hmi/logs/` are git-ignored and stay |
+| `address already in use` when you start the station by hand on the Pi | The auto-started station is already running on port 8000 | `sudo systemctl stop chemshield-station` first (or use `sudo systemctl restart chemshield-station` instead of starting it by hand) |
 | Model A blocks a correct recovery dose | The probe lags after a large upset and Model A reads that as risk | ACKNOWLEDGE, HALT DOSING, RESUME DOSING (E2) |
 | `c2_check` reports an extra open port or `ip_forward=1` | The firewall was not re-applied after a reboot or a Wi-Fi restart | `sudo bash gateway/firewall/c2_network.sh fw` on the Pi, then run the check again |
 

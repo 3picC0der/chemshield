@@ -1,4 +1,4 @@
-# Code behind this spec (snapshot of commit `cd76385`)
+# Code behind this spec (snapshot of commit `a4b9a03`)
 
 These files are copies of the live code at the repo-relative path shown; read them here next to
 the test sheet. The running system uses the originals in the repo root.
@@ -25,8 +25,16 @@ the test sheet. The running system uses the originals in the repo root.
 - `hmi/c2_check.py`
 - `hmi/common.py`
 - `hmi/station/server.py`
+- `gateway/systemd/README.md`
+- `gateway/systemd/boot_firewall.sh`
+- `gateway/systemd/chemshield-firewall.service.in`
+- `gateway/systemd/chemshield-station.service.in`
+- `gateway/systemd/install.sh`
 - `gateway/tests/test_firewall_template.py`
+- `gateway/tests/test_systemd_autostart.py`
 - `hmi/tests/test_c2_check.py`
+- `hmi/tests/test_station.py`
+- `hmi/tests/helpers.py`
 
 ## Scripts that exist only for this evidence (they live in this folder)
 

@@ -1,4 +1,4 @@
-# Code behind this spec (snapshot of commit `cd76385`)
+# Code behind this spec (snapshot of commit `a4b9a03`)
 
 These files are copies of the live code at the repo-relative path shown; read them here next to
 the test sheet. The running system uses the originals in the repo root.
@@ -10,6 +10,8 @@ the test sheet. The running system uses the originals in the repo root.
 - `firmware/uno/chemshield_uno/chemshield_uno.ino`
 - `firmware/uno/uno_tool.py`
 - `firmware/uno/README.md`
+- `hmi/tests/test_station.py`
+- `hmi/tests/helpers.py`
 
 Not copied here because of size: the Model A training data (`model_a/data/*.csv.gz`), the trained model
 (`model_a/artifacts/model_a.joblib`) and the pH tables (`sim/aspen_tables/*.csv`). They are in the repo

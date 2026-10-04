@@ -1,0 +1,16 @@
+# ChemShield firewall at boot (ICS-AT-01 / C2). Rendered and installed by install.sh.
+[Unit]
+Description=ChemShield firewall: only SSH and the station reachable, no IP forwarding
+Wants=NetworkManager.service
+After=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# c2_network.sh logs to the home of $SUDO_USER (systemd sets no $USER for a root service)
+Environment=SUDO_USER=@USER@
+ExecStart=/bin/bash @REPO@/gateway/systemd/boot_firewall.sh
+TimeoutStartSec=420
+
+[Install]
+WantedBy=multi-user.target

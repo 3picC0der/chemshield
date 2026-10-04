@@ -21,6 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 EV = os.path.join(ROOT, "evidence")
 
 GATEWAY = ["gateway/src/chemshield_gateway/*.py"]
+STATION_TESTS = ["hmi/tests/test_station.py", "hmi/tests/helpers.py"]   # the unit tests the sheets cite
 REDOSING_SIM = ["sim/*.py", "sim/README.md", "sim/tests/*.py", "sim/aspen_tables/README.md",
                 "redosing/*.py", "redosing/README.md", "redosing/qc/*.py"]
 
@@ -29,31 +30,33 @@ MAPPING: dict[str, list[str]] = {
         "gateway/src/chemshield_gateway/config.py", "hmi/common.py"],
     "02_C2_gateway_sole_control_path": GATEWAY + [
         "gateway/firewall/*", "gateway/threat_model.md", "gateway/README.md",
-        "hmi/c2_check.py", "hmi/common.py", "hmi/station/server.py",
-        "gateway/tests/test_firewall_template.py", "hmi/tests/test_c2_check.py"],
+        "hmi/c2_check.py", "hmi/common.py", "hmi/station/server.py", "gateway/systemd/*",
+        "gateway/tests/test_firewall_template.py", "gateway/tests/test_systemd_autostart.py",
+        "hmi/tests/test_c2_check.py"] + STATION_TESTS,
     "03_C3_max_50mmol_per_recovery": [
         "gateway/src/chemshield_gateway/gateway_validator.py", "gateway/src/chemshield_gateway/config.py",
-        "gateway/tests/test_event_mmol.py", "hmi/station/core.py", "hmi/common.py"] + REDOSING_SIM,
+        "gateway/tests/test_event_mmol.py", "hmi/station/core.py", "hmi/common.py"] + STATION_TESTS + REDOSING_SIM,
     "04_S1_ph_hold_10min": [
         "hmi/station/core.py", "hmi/station/links.py", "hmi/common.py",
-        "firmware/uno/chemshield_uno/*", "firmware/uno/uno_tool.py", "firmware/uno/README.md"],
+        "firmware/uno/chemshield_uno/*", "firmware/uno/uno_tool.py", "firmware/uno/README.md"] + STATION_TESTS,
     "05_S3_replay_stale_rejected": GATEWAY + [
-        "gateway/attack_script.py", "gateway/tests/*.py", "hmi/attack_station.py", "hmi/verify_log.py",
-        "hmi/station/audit.py", "hmi/station/core.py", "hmi/common.py"],
+        "gateway/attack_script.py", "gateway/tests/test_event_mmol.py", "gateway/tests/test_mixing_lockout.py",
+        "hmi/attack_station.py", "hmi/verify_log.py",
+        "hmi/station/audit.py", "hmi/station/core.py", "hmi/common.py"] + STATION_TESTS,
     "06_S4_class_and_score_within_3s": [
         "model_a/*.py", "model_a/README.md", "model_a/tests/*.py", "model_a/artifacts/MODEL_CARD.md",
         "model_a/artifacts/evidence.json", "model_a/data/DATASET_CARD.md", "model_a/data/manifest.json",
-        "gateway/src/chemshield_gateway/model_a_client.py", "gateway/src/chemshield_gateway/gateway_validator.py"],
+        "gateway/src/chemshield_gateway/model_a_client.py", "gateway/src/chemshield_gateway/gateway_validator.py"] + STATION_TESTS,
     "07_S5_sus_at_least_80": [
         "hmi/__init__.py", "hmi/__main__.py", "hmi/app.py", "hmi/common.py", "hmi/demo.py", "hmi/facilitator.py",
         "hmi/static/*", "hmi/DESIGN.md", "hmi/wireframe.html", "hmi/README.md"],
     "08_S7_pump_max_flow": [],
     "09_INT-S1_recovery_mode_within_2s": [
         "hmi/station/*.py", "hmi/common.py", "hmi/int_s1_batch.py", "hmi/mock_uno.py",
-        "firmware/uno/chemshield_uno/*", "firmware/uno/uno_tool.py"],
+        "firmware/uno/chemshield_uno/*", "firmware/uno/uno_tool.py"] + STATION_TESTS,
     "EXTRA_S2_dose_cap_and_mixing_wait": [
         "gateway/src/chemshield_gateway/gateway_validator.py", "gateway/src/chemshield_gateway/config.py",
-        "gateway/tests/test_mixing_lockout.py", "hmi/station/core.py"],
+        "gateway/tests/test_mixing_lockout.py", "hmi/station/core.py"] + STATION_TESTS,
     "EXTRA_S6_recovery_within_300s": REDOSING_SIM,
     "EXTRA_INT-S2_ph_restored_within_5min": REDOSING_SIM,
     "EXTRA_INT-S3_no_far_side_excursion": REDOSING_SIM,

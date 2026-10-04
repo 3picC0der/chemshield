@@ -20,6 +20,8 @@ Goal: support **C2** by making the Raspberry Pi ChemShield gateway the only auth
 
 ## Before running it on the Pi
 
+- To have the Pi apply the firewall at every boot, and start the station, install the services in
+  `gateway/systemd/` (see its README). Running the script again after every reboot, as the next point says, is then done for you.
 - Start the hotspot first, then run the script. NetworkManager's hotspot ("shared" mode)
   turns IP forwarding back on when it starts, so run the script again after every reboot
   or hotspot restart, and check `sysctl net.ipv4.ip_forward` shows `0`.

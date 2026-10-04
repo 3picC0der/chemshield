@@ -1,4 +1,4 @@
-# Code behind this spec (snapshot of commit `cd76385`)
+# Code behind this spec (snapshot of commit `a4b9a03`)
 
 No software is involved in this spec: it is a physical measurement.
 
