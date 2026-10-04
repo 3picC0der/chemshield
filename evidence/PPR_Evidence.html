@@ -192,7 +192,7 @@ html { scroll-behavior: smooth; }
         </tr>
         <tr>
           <td class="id">INT</td>
-          <td colspan="2"><b>INT-S1</b> recovery mode within 2 s <br><span class="pill warn">Dry run 100 / 100 · live run tomorrow</span></td>
+          <td colspan="2"><b>INT-S1</b> recovery mode within 2 s <br><span class="pill pass">Proven live on the rig · 1.1 ms</span></td>
           <td class="muted">—</td>
         </tr>
       </tbody>
@@ -407,31 +407,39 @@ html { scroll-behavior: smooth; }
   <div class="eyebrow">Integrated system</div>
 
   <div class="item" id="int1">
-    <div class="item-head"><h3>INT-Spec 1 · Safe-recovery mode within 2 s</h3><span class="tid">INT-AT-01</span><span class="pill warn">Dry run passed · live run tomorrow</span></div>
+    <div class="item-head"><h3>INT-Spec 1 · Safe-recovery mode within 2 s</h3><span class="tid">INT-AT-01</span><span class="pill pass">Proven live on the rig, 4 Oct</span></div>
     <div class="tiles">
-      <div class="tile"><b>100 / 100</b><span>events under 2 s (dry run)</span></div>
-      <div class="tile"><b>7.1 ms</b><span>slowest switch to RECOVERY</span></div>
-      <div class="tile"><b>261 ms</b><span>slowest until shown on the HMI</span></div>
+      <div class="tile"><b>1.1 ms</b><span>confirmed → RECOVERY (limit 2,000 ms)</span></div>
+      <div class="tile"><b>8.1 ms</b><span>until the Uno confirmed dosing locked</span></div>
+      <div class="tile"><b>327 ms</b><span>until the HMI showed it</span></div>
+      <div class="tile"><b>100 / 100</b><span>dry-run events under 2 s</span></div>
     </div>
     <div class="tablebox"><table class="sheet"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
       <thead><tr><th>No.</th><th>Spec (full)</th><th>Test procedure</th><th>Achieved result / evidence</th></tr></thead>
       <tbody>
         <tr><td class="id" rowspan="4">INT-S1</td><td class="spec" rowspan="4">The integrated system shall enter safe-recovery mode within 2 s of confirming a successful unsafe dosing event.</td>
           <td>1. Dry run: 100 unsafe events on the station, HMI watching over HTTP (<code>hmi.int_s1_batch</code>).</td><td class="result num"><strong>100 / 100</strong> under 2 s · switch max 7.1 ms · on screen mean 124 ms, max 261 ms</td></tr>
-        <tr><td>2. Real rig: tank at pH 7, add 0.05 M HCl by syringe (about 55–70 mL) until pH &lt; 6.0. After 3 low readings the event is confirmed.</td><td class="result">Banner red ______ · light slow-blinks ______</td></tr>
-        <tr><td>3. HMI: Evidence → Recovery-mode timing.</td><td class="result">Confirmed → RECOVERY ______ ms</td></tr>
-        <tr class="verdict"><td>Pass if: RECOVERY within 2,000 ms of the confirmed event and the Uno shows locked.</td><td><span class="pill pass">Met in the dry run</span> · live to add</td></tr>
+        <tr><td>2. Real rig, 4 Oct: the real probe in a pH 7 buffer tank (the system to protect). 0.05 M HCl added by syringe, not through the HMI, until the pH fell below 6.0.</td><td class="result num">Event <strong>E-0001</strong> confirmed 14:23:54.507 UTC on readings 5.6, 5.16, 5.19 (first below 6.0 at 14:23:52.5). Banner red, Uno light slow-blinking.</td></tr>
+        <tr><td>3. HMI: Evidence → Recovery-mode timing, and the hash-chained audit log (57 records, CHAIN OK).</td><td class="result num">Confirmed → RECOVERY <strong>1.1 ms</strong> · Uno locked <strong>8.1 ms</strong> · HMI showed it <strong>326.7 ms</strong> · pass_2s = True</td></tr>
+        <tr class="verdict"><td>Pass if: RECOVERY within 2,000 ms of the confirmed event and the Uno shows locked.</td><td><span class="pill pass">Met: 1.1 ms against 2,000 ms</span></td></tr>
       </tbody></table></div>
-    <div class="evidence single">
+    <div class="evidence">
+      <figure>
+        <img src="INT/INT-AT-01/rig_run_4Oct/INT-AT-01_ph_trace.png" alt="pH falling through 6.0 at the confirmed event, with the milliseconds to RECOVERY annotated">
+        <figcaption>The real probe during the live run. The red line is the confirmed event; recovery mode was entered 1.1 ms later.</figcaption>
+      </figure>
       <div class="files">
-        <div class="eyebrow">Files · dry run, 30 Sep</div>
+        <div class="eyebrow">Files · live rig run, 4 Oct</div>
         <ul>
-          <li><a href="INT/INT-AT-01/laptop_dry_run/INT-AT-01_batch.csv">INT-AT-01_batch.csv</a> · one row per event</li>
-          <li><a href="INT/INT-AT-01/laptop_dry_run/INT-AT-01_summary.json">INT-AT-01_summary.json</a></li>
+          <li><a href="INT/INT-AT-01/rig_run_4Oct/INT-AT-01_int_s1_timing.csv">INT-AT-01_int_s1_timing.csv</a> · the timing tab's download</li>
+          <li><a href="INT/INT-AT-01/rig_run_4Oct/audit.jsonl">audit.jsonl</a> · every event, hash-chained</li>
+          <li><a href="INT/INT-AT-01/rig_run_4Oct/INT-AT-01_ph_trend.csv">INT-AT-01_ph_trend.csv</a> · the probe readings</li>
+          <li><a href="INT/INT-AT-01/rig_run_4Oct/model_a_decisions.csv">model_a_decisions.csv</a></li>
+          <li>Dry run, 30 Sep: <a href="INT/INT-AT-01/laptop_dry_run/INT-AT-01_batch.csv">INT-AT-01_batch.csv</a> (100 events)</li>
         </ul>
       </div>
     </div>
-    <div class="live">Live: the strongest moment of the demo. Add the acid in front of the reviewer, point at the red banner and the blinking light, then open the timing tab.</div>
+    <div class="live">Live: the strongest moment of the demo. Add the acid in front of the reviewer, point at the red banner and the blinking light, then open the timing tab. After the timing is read, press HALT DOSING: the planner assumes a 5 L tank, so do not follow its doses in a small cup.</div>
   </div>
 </section>
 
@@ -484,9 +492,10 @@ html { scroll-behavior: smooth; }
   <h2>Still to do (4 Oct)</h2>
   <p class="muted">In this order. Film each one: the video is the backup if anything fails live on Monday.</p>
   <ol class="todo-list">
-    <li>Re-check the probe in fresh pH 7 buffer; recalibrate with a pH 4 or 10 buffer if it reads off. <span class="who">Belal</span></li>
-    <li>Fill the tank and bring it to pH 7 with 0.05 M HCl (about 18 mL). <span class="who">Belal</span></li>
-    <li><b>INT-S1</b> live on the rig, then <b>C3</b>'s live total from the same recovery. <span class="who">Belal</span></li>
+    <li>Probe: the new probe is noisy (the Uno warns "A0 at rail"); check the BNC plug and the three board wires, then calibrate pH 7 and pH 4. <span class="who">Belal</span></li>
+    <li>Find out why the Uno reports "lost heartbeat" every few seconds to minutes. It did not affect INT-S1. <span class="who">Claude</span></li>
+    <li>Fill the 5 L tank (baking-soda water) and bring it to pH 7 with 0.05 M HCl (about 18 mL). <span class="who">Belal</span></li>
+    <li><b>C3</b>'s live total: needs a recovery on the 5 L tank with the planner's doses added by hand (INT-S1 itself is done). <span class="who">Belal</span></li>
     <li><b>S3</b> again from the laptop against the Pi over Wi-Fi. <span class="who">Belal, Khalid</span></li>
     <li><b>S1</b> 10-minute hold (extra for CHE). <span class="who">Abdulkarim</span></li>
     <li><b>C2</b> last: the Pi's own Wi-Fi with the firewall, nmap, ip_forward, 401, password refused. The Mac has no internet during this step. <span class="who">Belal, Khalid</span></li>
