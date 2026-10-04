@@ -1,0 +1,28 @@
+ICS-AT-01 (C2) check against 172.20.10.2 at 2026-10-04T17:28:13+00:00
+
+[PASS] 1. port scan: open TCP ports [22, 8000] (expected [22, 8000]); nmap, 1141 TCP ports; 59 s
+[PASS] 2. unsigned dose: HTTP 401, MISSING_SIGNATURE
+[PASS] 3. dose signed with the wrong key: HTTP 401, INVALID_HMAC
+[PASS] 4. unsigned operator action (HALT): HTTP 401
+[PASS] 5. body that is not a command: HTTP 400
+[PASS] 6. SSH password login: server offers: publickey
+[PASS] 7. routing and firewall on the Pi: ip_forward=0; -P INPUT DROP; -P FORWARD DROP
+[PASS] 8. nothing reached the Uno: accepted doses 3 to 3; dose pending: False; Uno light: locked
+
+C2 PASS: only the gateway path works
+
+---- raw output ----
+$ nmap -Pn -p 1-1024,1883,1884,2222,3000,4840,5000-5002,5353,5900,8000-8100,8443,8883,9000,9100,44818,47808 -T4 --max-retries 1 -oG - 172.20.10.2
+# Nmap 7.991 scan initiated Sun Oct  4 20:27:14 2026 as: nmap -Pn -p 1-1024,1883,1884,2222,3000,4840,5000-5002,5353,5900,8000-8100,8443,8883,9000,9100,44818,47808 -T4 --max-retries 1 -oG - 172.20.10.2
+Host: 172.20.10.2 ()	Status: Up
+Host: 172.20.10.2 ()	Ports: 22/open/tcp//ssh///, 8000/open/tcp//http-alt///	Ignored State: filtered (1139)
+# Nmap done at Sun Oct  4 20:28:12 2026 -- 1 IP address (1 host up) scanned in 58.59 seconds
+$ ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive chemshield@172.20.10.2 true
+chemshield@172.20.10.2: Permission denied (publickey).
+$ ssh pi: ip_forward, INPUT and FORWARD policy, listening sockets
+0
+-P INPUT DROP
+-P FORWARD DROP
+LISTEN 0      2048         0.0.0.0:8000      0.0.0.0:*   
+LISTEN 0      128          0.0.0.0:22        0.0.0.0:*   
+LISTEN 0      128             [::]:22           [::]:*
