@@ -48,6 +48,7 @@ TRIM_BAND = (6.7, 7.3)       # during the S1 hold log, suggest a trim dose outsi
 CONFIRM_READINGS = 3         # readings in a row outside BAND that confirm an event
 MIX_S = 15.0                 # S2 mixing hold after each dose
 PENDING_TIMEOUT_S = 120.0    # a dose nobody confirms is cancelled after this
+PUMP_TIMEOUT_S = 75.0        # a pump dose the Uno has not finished by now is stopped (the Uno's own limit is 60 s)
 HOLD_LOG_S = 600.0           # S1: 10 minutes
 TREND_S = 1800               # pH history kept for the trend and the CSV
 TICK_S = 0.1
@@ -131,7 +132,8 @@ class Station:
         self._event_counter = itertools.count(1)
         self.event: dict[str, Any] | None = None
         self.events: list[dict[str, Any]] = []            # closed and open, newest last
-        self.pending: dict[str, Any] | None = None          # the dose waiting for the operator
+        self.pending: dict[str, Any] | None = None          # the dose waiting for the operator (or the pump)
+        self.last_pump: dict[str, Any] | None = None        # the last pump dose sent, to match a late ABORT
         self.mixing_until: float | None = None
         self.block: list[dict[str, Any]] = []
         self.plan: dict[str, Any] | None = None
@@ -524,14 +526,21 @@ class Station:
             speed = P["dose_speed_ml_per_min"] / 60.0
         run_ms = int(max(1.0, ml / speed) * 1000)
         seq = int(cmd["sequence_number"]) % 1_000_000
+        pumped = bool(getattr(self.link, "pumps", False))
         self.pending = {
             "command_id": cmd["command_id"], "channel_id": ch, "words": CHANNELS[ch]["words"],
             "ml": ml, "mmol": round(ml * CHANNELS[ch]["molarity"], 4), "sender": sender,
             "event_id": cmd["event_id"], "accepted_utc": result["decided_utc"],
-            "t_accepted": self.clock(), "run_ms": run_ms,
-            "instruction": f"Add {ml:g} mL of {CHANNELS[ch]['words']} now, then stir.",
+            "t_accepted": self.clock(), "run_ms": run_ms, "pump": pumped, "seq": seq,
+            "instruction": (f"Pump {CHANNELS[ch]['pump']} is adding {ml:g} mL of {CHANNELS[ch]['words']}; "
+                            f"the mixer runs." if pumped else
+                            f"Add {ml:g} mL of {CHANNELS[ch]['words']} now, then stir."),
         }
-        self.link.dose(seq, CHANNELS[ch]["pump"], run_ms)
+        if pumped:
+            self.last_pump = {k: self.pending[k] for k in ("seq", "command_id", "channel_id", "words", "event_id")}
+            self.link.pump(seq, ch, ml)
+        else:
+            self.link.dose(seq, CHANNELS[ch]["pump"], run_ms)
         if self.event is not None and cmd["event_id"] == self.event["id"]:
             self.event["doses"].append({"command_id": cmd["command_id"], "channel_id": ch, "ml": ml,
                                         "mmol": self.pending["mmol"], "sender": sender,
@@ -545,19 +554,30 @@ class Station:
                 and now - p["t_accepted"] >= p["run_ms"] / 1000.0:
             self.dose_added(p["command_id"], by="simulated pump (auto)")
             return
-        if now - p["t_accepted"] > PENDING_TIMEOUT_S:
+        if p.get("pump") and now - p["t_accepted"] > PUMP_TIMEOUT_S:
+            self._cancel_pending(f"the Uno did not report the pump finished within {PUMP_TIMEOUT_S:.0f} s")
+        elif now - p["t_accepted"] > PENDING_TIMEOUT_S:
             self._cancel_pending(f"nobody confirmed it within {PENDING_TIMEOUT_S:.0f} s")
 
-    def dose_added(self, command_id: str, by: str = "operator") -> dict[str, Any]:
+    def dose_added(self, command_id: str, by: str = "operator",
+                   delivered_ml: float | None = None) -> dict[str, Any]:
+        """The dose is in the tank: the operator pressed DOSE ADDED (hand dosing), or the Uno
+        reported DONE with the volume its pump delivered (delivered_ml)."""
         p = self.pending
         if p is None or p["command_id"] != command_id:
             return {"ok": False, "error": "that dose is not waiting to be added"}
+        if p.get("pump") and delivered_ml is None:
+            return {"ok": False, "error": "the pump adds this dose; it counts when the Uno reports DONE"}
         now = self.clock()
         self.pending = None
-        self.link.stop_dose()
-        self.link.dose_added(p["channel_id"], p["ml"])
+        ml = p["ml"] if delivered_ml is None else float(delivered_ml)
+        if p.get("pump"):
+            self.link.dose_on = False             # the Uno has already stopped
+        else:
+            self.link.stop_dose()
+        self.link.dose_added(p["channel_id"], ml)
         if self.model_a is not None:
-            self.model_a.dose_added(command_id)
+            self.model_a.dose_added(command_id, delivered_ml=delivered_ml)
         # the 15 s mixing wait counts from when the dose actually went in
         self.gstate.last_dose_accepted_at_s = self.gateway.clock()
         self.mixing_until = now + MIX_S
@@ -566,13 +586,17 @@ class Station:
             for d in self.event["doses"]:
                 if d["command_id"] == command_id:
                     d["added_utc"] = added
+                    d["ml"] = ml
         for b in self.block:
             if b["command_id"] == command_id:
                 b["status"] = "mixing"
                 b["added_t"] = now
-        self.audit.event("DOSE_ADDED", f"{p['ml']:g} mL {p['words']} added to the tank ({by}); "
-                         f"15 s mixing starts", event_id=p["event_id"], source="HMI" if by == "operator" else "station",
-                         command_id=command_id, channel_id=p["channel_id"], volume_ml=p["ml"])
+        what = (f"{ml:.3f} mL {p['words']} delivered by pump {CHANNELS[p['channel_id']]['pump']} "
+                f"({p['ml']:g} mL approved)" if delivered_ml is not None else f"{ml:g} mL {p['words']}")
+        self.audit.event("DOSE_ADDED", f"{what} added to the tank ({by}); 15 s mixing starts",
+                         event_id=p["event_id"],
+                         source={"operator": "HMI", "pump": "Uno"}.get(by, "station"),
+                         command_id=command_id, channel_id=p["channel_id"], volume_ml=ml)
         if self.event is not None and self.block:
             if any(b["status"] == "queued" for b in self.block):
                 self.next_block_at = now + MIX_S + 0.2
@@ -594,8 +618,36 @@ class Station:
             self.event["doses"] = [d for d in self.event["doses"] if d["command_id"] != p["command_id"]]
             if self.mode == "RECOVERY":
                 self.next_plan_at = self.clock() + 2.0
-        self.audit.event("DOSE_CANCELLED", f"{p['ml']:g} mL {p['words']} was not added: {why}. "
-                         f"Do not add it.", event_id=p["event_id"], command_id=p["command_id"])
+        if p.get("pump"):
+            msg = (f"{p['ml']:g} mL {p['words']} was stopped: {why}. The Uno reports how much "
+                   f"the pump delivered before it stopped.")
+        else:
+            msg = f"{p['ml']:g} mL {p['words']} was not added: {why}. Do not add it."
+        self.audit.event("DOSE_CANCELLED", msg, event_id=p["event_id"], command_id=p["command_id"])
+
+    def _pump_finished(self, ev: dict[str, Any]) -> None:
+        """DONE or ABORT from the Uno for a pump dose. Only DONE counts as added; an ABORT is
+        logged with what went in, and anything that went in starts the 15 s mixing wait."""
+        seq, ml = ev.get("seq"), float(ev.get("ml") or 0.0)
+        p = self.pending
+        if p is not None and p.get("pump") and p.get("seq") == seq:
+            if ev["kind"] == "PUMP_DONE":
+                self.dose_added(p["command_id"], by="pump", delivered_ml=ml)
+                return
+            self._cancel_pending(f"the Uno stopped the pump ({ev.get('reason') or 'no reason given'})")
+        known = self.last_pump if self.last_pump and self.last_pump.get("seq") == seq else None
+        words = known["words"] if known else CHANNELS.get(ev.get("channel_id", ""), {}).get("words", "?")
+        what = "finished" if ev["kind"] == "PUMP_DONE" else f"stopped ({ev.get('reason') or '?'})"
+        self.audit.event("PUMP_STOPPED", f"pump {what}: {ml:.3f} mL {words} went into the tank"
+                         + ("; 15 s mixing starts" if ml > 0 else ""),
+                         event_id=known["event_id"] if known else "", source="Uno",
+                         command_id=known["command_id"] if known else "-",
+                         channel_id=ev.get("channel_id", ""), volume_ml=ml)
+        if ml > 0:
+            self.gstate.last_dose_accepted_at_s = self.gateway.clock()
+            self.mixing_until = self.clock() + MIX_S
+            if known and self.model_a is not None:
+                self.model_a.dose_added(known["command_id"], delivered_ml=ml)
 
     # ---------------------------------------------------------------- Uno and link
     def _on_uno_event(self, ev: dict[str, Any]) -> None:
@@ -610,9 +662,14 @@ class Station:
                                  f"was confirmed", event_id=self.event["id"], source="Uno")
         elif kind == "ESTOP":
             self.halt("E-STOP pressed on the rig", by="Uno")
+        elif kind in ("PUMP_DONE", "PUMP_ABORT"):
+            self._pump_finished(ev)
         elif kind == "UNO_REJECT":
             self.audit.event("UNO_REJECT", f"Uno refused a dose: {ev.get('reason', '')} ({ev.get('line', '')})",
                              source="Uno")
+            p = self.pending
+            if p is not None and p.get("pump") and p.get("seq") == ev.get("seq"):
+                self._cancel_pending(f"the Uno refused it ({ev.get('reason', '')}); nothing was pumped")
         elif kind == "UNO_HEARTBEAT_LOST":
             self.audit.event("UNO_HEARTBEAT_LOST", "Uno reports it lost the Pi's heartbeat and stopped", source="Uno")
 
@@ -905,7 +962,7 @@ class Station:
             return None
         out = {k: v for k, v in p.items() if k != "t_accepted"}
         out["waiting_s"] = round(now - p["t_accepted"], 1)
-        out["timeout_s"] = PENDING_TIMEOUT_S
+        out["timeout_s"] = PUMP_TIMEOUT_S if p.get("pump") else PENDING_TIMEOUT_S
         return out
 
     def _plan_view(self, now: float) -> dict[str, Any] | None:

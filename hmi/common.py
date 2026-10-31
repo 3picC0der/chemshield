@@ -55,12 +55,14 @@ def gateway_config(secret: str | None = None) -> GatewayConfig:
 
 
 # ------------------------------------------------------------------ bottles
-# I1 channel ids. Pump numbers are I5's 1-4, in sim/model.py PUMPS order.
+# I1 channel ids. Pump numbers are I5's 1-4 as wired on the Final Prototype's CNC shield:
+# 1 ACID_BULK (X), 2 ACID_FINE (Y), 3 BASE_BULK (Z), 4 BASE_FINE (A). The firmware's PUMP
+# line names the channel, so only the old light-only DOSE line uses these numbers.
 CHANNELS: dict[str, dict[str, Any]] = {
-    "BASE_BULK": {"pump": 1, "molarity": 0.5, "words": "NaOH 0.5 M bulk", "short": "base, bulk"},
-    "BASE_FINE": {"pump": 2, "molarity": 0.005, "words": "NaOH 0.005 M fine", "short": "base, fine"},
-    "ACID_BULK": {"pump": 3, "molarity": 0.5, "words": "HCl 0.5 M bulk", "short": "acid, bulk"},
-    "ACID_FINE": {"pump": 4, "molarity": 0.005, "words": "HCl 0.005 M fine", "short": "acid, fine"},
+    "BASE_BULK": {"pump": 3, "molarity": 0.5, "words": "NaOH 0.5 M bulk", "short": "base, bulk"},
+    "BASE_FINE": {"pump": 4, "molarity": 0.005, "words": "NaOH 0.005 M fine", "short": "base, fine"},
+    "ACID_BULK": {"pump": 1, "molarity": 0.5, "words": "HCl 0.5 M bulk", "short": "acid, bulk"},
+    "ACID_FINE": {"pump": 2, "molarity": 0.005, "words": "HCl 0.005 M fine", "short": "acid, fine"},
 }
 
 # ------------------------------------------------------------------ reason codes

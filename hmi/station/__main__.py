@@ -1,7 +1,9 @@
 """Run the station (the Pi side).
 
-On the Pi, with the Uno on USB and the real probe:
+On the Pi, with the Uno on USB and the real probe (the Uno runs the pumps):
     .venv/bin/python -m hmi.station --ph-source uno
+The PPR rig (hand dosing: the Uno only lights the dose light):
+    .venv/bin/python -m hmi.station --ph-source uno --dosing hand
 
 On the Pi or a laptop, with the simulated tank instead of the probe (labelled SIM everywhere):
     .venv/bin/python -m hmi.station --ph-source sim
@@ -21,7 +23,7 @@ from hmi.common import ROOT, STATION_PORT, load_secret
 
 def make_station(ph_source: str, *, port: str = "auto", start_ph: float = 7.0, auto_pump: bool = True,
                  dwell_s: float = 60.0, hand_speed_ml_s: float = 2.0, log_root: Path | None = None,
-                 use_model_a: bool = True):
+                 use_model_a: bool = True, dosing: str = "pump"):
     from .core import Station
     from .links import SimLink, UnoLink
 
@@ -29,7 +31,7 @@ def make_station(ph_source: str, *, port: str = "auto", start_ph: float = 7.0, a
     if ph_source == "sim":
         link = SimLink(start_ph=start_ph, auto_pump=auto_pump)
     else:
-        link = UnoLink(port=port)
+        link = UnoLink(port=port, pumps=dosing == "pump")
     run = time.strftime("%Y%m%d-%H%M%S") + f"-{ph_source}"
     log_dir = (log_root or ROOT / "hmi" / "logs") / run
     station = Station(link, secret, log_dir=log_dir, dwell_s=dwell_s, hand_speed_ml_s=hand_speed_ml_s,
@@ -49,6 +51,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start-ph", type=float, default=7.0,
                     help="simulated tank start pH (7.0 = the baking-soda liquid after the 1.8 mL "
                          "acid setup step; 0 = the liquid as made, about 8.3)")
+    ap.add_argument("--dosing", choices=("pump", "hand"), default="pump",
+                    help="uno: pump = the Uno runs the pumps and reports what they delivered "
+                         "(Final Prototype); hand = the Uno only lights the dose light (PPR rig)")
     ap.add_argument("--no-auto-pump", action="store_true",
                     help="simulator: wait for 'Dose added' instead of adding doses by itself")
     ap.add_argument("--dwell", type=float, default=60.0,
@@ -60,8 +65,11 @@ def main(argv: list[str] | None = None) -> int:
 
     station = make_station(a.ph_source, port=a.serial_port, start_ph=a.start_ph,
                            auto_pump=not a.no_auto_pump, dwell_s=a.dwell,
-                           hand_speed_ml_s=a.hand_speed, use_model_a=not a.no_model_a)
-    print(f"ChemShield station: pH source {station.link.kind}, chemistry {station.chem_source}, "
+                           hand_speed_ml_s=a.hand_speed, use_model_a=not a.no_model_a,
+                           dosing=a.dosing)
+    print(f"ChemShield station: pH source {station.link.kind}, "
+          f"dosing {'pumps' if station.link.pumps else 'by hand' if a.ph_source == 'uno' else 'simulated'}, "
+          f"chemistry {station.chem_source}, "
           f"key from {station.key_source}")
     print(f"logs: {station.log_dir}")
     if station.model_a_error:

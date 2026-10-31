@@ -324,10 +324,13 @@ function renderDoseNow(s) {
   const p = s.pending, card = $("dose-now");
   card.classList.toggle("hidden", !p);
   if (!p) return;
-  $("dose-instr").textContent = `Add ${num(p.ml, 1)} mL of ${p.words} now, then stir.`;
+  $("dose-instr").textContent = p.instruction || `Add ${num(p.ml, 1)} mL of ${p.words} now, then stir.`;
   const auto = s.ph.source === "SIM" && s.link.auto_pump;
   $("dose-meta").innerHTML = `Accepted by the gateway at ${hms(p.accepted_utc)} · from ${esc(p.sender)} · ${num(p.mmol, 3)} mmol · Uno light: ${esc(s.link.led_words)}.<br>` +
-    (auto ? "Simulator: the dose is added automatically." : `Press DOSE ADDED when it is in the tank. The 15 s mixing wait starts then. (Cancelled after ${num(p.timeout_s, 0)} s.)`);
+    (p.pump ? `The dose counts as added when the Uno reports the pump finished, with the mL it delivered. The 15 s mixing wait starts then. (Stopped after ${num(p.timeout_s, 0)} s.)`
+      : auto ? "Simulator: the dose is added automatically." : `Press DOSE ADDED when it is in the tank. The 15 s mixing wait starts then. (Cancelled after ${num(p.timeout_s, 0)} s.)`);
+  $("btn-added").classList.toggle("hidden", !!p.pump);
+  $("btn-notadded").textContent = p.pump ? "STOP THE PUMP" : "Not added: cancel it";
   $("btn-added").dataset.cmd = p.command_id;
   $("btn-notadded").dataset.cmd = p.command_id;
 }

@@ -2,6 +2,8 @@
 
 UnoLink   the real rig: the Uno on the Pi's USB port. The Uno sends `PH,7.02` once a
           second; the Pi sends a heartbeat, dose and mode lines (docs in hmi/README.md).
+          On the Final Prototype the Uno also runs the pumps (`PUMP,...`) and reports
+          the volume each pump actually delivered (`DONE,...` / `ABORT,...`).
 SimLink   no hardware: Hattan's simulated tank (sim/live.py) with probe lag and noise,
           plus a stand-in for the Uno's light. The HMI labels everything from it SIM.
 
@@ -15,6 +17,8 @@ import threading
 import time
 from collections import deque
 from typing import Any, Callable
+
+from hmi.common import CHANNELS
 
 HEARTBEAT_PERIOD_S = 0.5     # I5: the Pi sends HB every 0.5 s
 LINK_TIMEOUT_S = 2.0         # no line from the Uno for this long = link lost (I5 uses 2 s)
@@ -30,8 +34,23 @@ LED_WORDS = {
 MODE_TO_LED = {"NORMAL": "off", "RECOVERY": "locked", "HALT": "halt"}
 
 
+def _int(text: str) -> int | None:
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def _float(text: str) -> float:
+    try:
+        return max(0.0, float(text))
+    except ValueError:
+        return 0.0
+
+
 class Link:
     kind = "BASE"            # "SIM" or "PROBE": which pH source the HMI must label
+    pumps = False            # True: the Uno runs the pumps (PUMP lines); False: hand dosing
 
     def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
         self.clock = clock
@@ -81,6 +100,16 @@ class Link:
         self.dose_on = True
         self._write(f"DOSE,{seq},{pump},{int(run_ms)}")
 
+    def pump(self, seq: int, channel_id: str, ml: float) -> None:
+        """Run the channel's pump for ml. The Uno answers DONE or ABORT with what it delivered."""
+        self.dose_on = True
+        self._write(f"PUMP,{seq},{channel_id},{float(ml):.3f}")
+
+    def mix(self, pwm: int) -> None:
+        """The mixer's speed between doses (0-255, 0 = off). The Uno runs it during each dose
+        and for the 15 s mixing wait by itself."""
+        self._write(f"MIX,{max(0, min(255, int(pwm)))}")
+
     def stop_dose(self) -> None:
         self.dose_on = False
         self._write("STOP")
@@ -91,6 +120,7 @@ class Link:
     def info(self) -> dict[str, Any]:
         return {"kind": self.kind, "alive": self.alive(), "line_age_s": self.line_age_s(),
                 "led": self.led(), "led_words": LED_WORDS[self.led()], "estop": self.estop,
+                "pumps": self.pumps,
                 "mode_sent": self.mode, "mode_ack": self.last_mode_ack}
 
     # ---------------------------------------------------------------- helpers
@@ -114,14 +144,18 @@ class Link:
 class UnoLink(Link):
     """The Uno on USB serial (115200 baud). Needs pyserial.
 
-    Pi -> Uno:  HB | DOSE,<seq>,<pump 1-4>,<run_ms> | STOP | MODE,<NORMAL|RECOVERY|HALT> | STATUS
+    Pi -> Uno:  HB | PUMP,<seq>,<CHANNEL>,<mL> | DOSE,<seq>,<pump 1-4>,<run_ms> | STOP |
+                MODE,<NORMAL|RECOVERY|HALT> | MIX,<0-255> | STATUS
     Uno -> Pi:  PH,<pH> (once a second) | OK,<seq> | OK,MODE,<mode> | OK,STOP |
-                REJECT,<seq>,<reason> | DONE,<seq>,<ms_run> | STATUS,<estop 0/1>,<busy 0/1>
+                REJECT,<seq>,<reason> | DONE,<seq>,<CHANNEL>,<mL> | ABORT,<seq>,<CHANNEL>,<mL>,<reason> |
+                DONE,<seq>,<ms_run> (light only) | STATUS,<estop 0/1>,<busy 0/1>
     """
     kind = "PROBE"
 
-    def __init__(self, port: str = "auto", baud: int = 115200, clock=time.monotonic) -> None:
+    def __init__(self, port: str = "auto", baud: int = 115200, clock=time.monotonic,
+                 pumps: bool = True) -> None:
         super().__init__(clock)
+        self.pumps = bool(pumps)
         self.port = port
         self.baud = baud
         self._ser = None
@@ -220,12 +254,21 @@ class UnoLink(Link):
                     and parts[2].upper() == self.last_mode_ack["mode"]:
                 self.last_mode_ack["ack_t"] = now
             event["kind"] = "MODE_ACK"
+        elif head in ("DONE", "ABORT") and len(parts) >= 4 and parts[2].upper() in CHANNELS:
+            # a pump dose: DONE,<seq>,<CHANNEL>,<mL> or ABORT,<seq>,<CHANNEL>,<mL>,<reason>
+            self.dose_on = False
+            event["kind"] = "PUMP_DONE" if head == "DONE" else "PUMP_ABORT"
+            event["seq"] = _int(parts[1])
+            event["channel_id"] = parts[2].upper()
+            event["ml"] = _float(parts[3])
+            event["reason"] = parts[4] if head == "ABORT" and len(parts) > 4 else ""
         elif head == "DONE":
             self.dose_on = False
             event["kind"] = "DONE"
         elif head == "REJECT":
             self.dose_on = False
             event["kind"] = "UNO_REJECT"
+            event["seq"] = _int(parts[1]) if len(parts) > 1 else None
             event["reason"] = parts[2] if len(parts) > 2 else ""
         elif head == "STATUS" and len(parts) >= 2:
             estop = parts[1].strip() == "1"

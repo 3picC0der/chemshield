@@ -300,15 +300,21 @@ class ModelAClient:
             self._log.write(command_id, channel_id, dose_ml, out, feats)
         return out
 
-    def dose_added(self, command_id: str) -> bool:
+    def dose_added(self, command_id: str, delivered_ml: float | None = None) -> bool:
         """Tell Model A that an accepted dose went into the tank (for features 10, 11, 13, 15).
 
         Uses the bottle, volume and predicted pH from Model A's own decision on that command.
+        delivered_ml: what a pump actually delivered, when the Uno reported it; if that is
+        more than 5 % off the approved volume the predicted pH no longer applies and is dropped.
         Returns False if Model A never saw the command.
         """
         known = self._recent.get(str(command_id))
         if known is None:
             return False
         channel_id, dose_ml, predicted = known
+        if delivered_ml is not None:
+            if abs(float(delivered_ml) - float(dose_ml)) > 0.05 * max(float(dose_ml), 1e-9):
+                predicted = None
+            dose_ml = float(delivered_ml)
         self.context.record_dose(channel_id, float(dose_ml), predicted)
         return True
