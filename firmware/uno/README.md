@@ -29,7 +29,14 @@ Never use D0 or D1: they carry the USB serial. D13 is pump 4's DIR now, so the b
 light just follows that pin; it no longer copies the dose light. With A1 left open the Uno
 reads the E-stop as pressed and refuses every dose (a loose wire fails safe).
 
-Things to know about the shield:
+Things to know about the shield (Protoneer CNC Shield V3.00, checked against a photo on 31 Oct):
+- **The pin labelled E-STOP on the shield is the Uno's RESET, not an input.** Wire the
+  E-stop's NC contact to **Hold** (A1) and GND, never to E-STOP: on RESET it would reboot
+  the Uno, and while it reboots the drivers can switch on by themselves (see below).
+- **SpnEn and SpnDir are D12 and D13**, pump 4's STEP and DIR once the A slot is bridged to
+  D12/D13. Leave those two header pins empty.
+- On the end-stop header the white row is the signal and the black row is GND; X+ and X-
+  are both D9, Y+ and Y- both D10. The L298N's GND must also go to a black (GND) pin.
 - **Microstepping.** No jumper caps under the drivers = full step (200 steps per turn).
   `MICROSTEPS` at the top of both sketches must match the caps: 1 now; set it to 4 in both
   sketches once caps for 1/4 step are fitted (on both driver types that is MS2 only). The
