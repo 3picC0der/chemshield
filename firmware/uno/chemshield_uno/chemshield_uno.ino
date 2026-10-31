@@ -102,8 +102,8 @@ struct Pump {
 Pump pumps[4] = {
   {"ACID_BULK", 2, 5, true, 4},
   {"ACID_FINE", 3, 6, true, 4},
-  {"BASE_BULK", 4, 7, true, 1},
-  {"BASE_FINE", 12, 13, true, 1},
+  {"BASE_BULK", 4, 7, true, 4},
+  {"BASE_FINE", 12, 13, true, 4},
 };
 
 // ------------------------------------------------------------------ calibration (EEPROM)
