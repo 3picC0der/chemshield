@@ -10,6 +10,11 @@
 //   SECS <pump 1-4> <s>      run for s seconds at the top speed (ramps included), max 120 s
 //   ML <pump 1-4> <mL>       run mL using the calibration stored by chemshield_uno (PCAL)
 //   RATE <full steps/s>      top speed (default 800)       ACCEL <full steps/s^2> (default 1600)
+//                            (a run starts at 10 full steps/s and ramps up at ACCEL; while
+//                            it runs, SPEED,<s since start>,<full steps/s> comes once a second)
+//   HOLD <pump 1-4> <s>      drivers on, no steps, for s seconds (max 60): both coils carry
+//                            a steady current, so a meter on DC volts across 2B-2A and across
+//                            1A-1B reads about I x R (roughly 2-3 V each); 0 V = that coil gets nothing
 //   MIX <0-255>              mixer speed (0 = off)          STOP   stop now
 //   INFO                     settings and the stored calibration
 // It answers RUN,... when a run starts and DONE,<pump>,<channel>,<full steps>,<ms>,<mL by the
@@ -23,22 +28,23 @@
 
 #include <EEPROM.h>
 
-const uint8_t MICROSTEPS = 1;              // match the jumper caps (none = 1), as in chemshield_uno
 const uint8_t PIN_ENABLE = 8;
 const uint8_t PIN_ESTOP = A1;
 const uint8_t PIN_MIX_PWM = 9;
 const uint8_t PIN_MIX_IN1 = 10;
 const bool ESTOP_FITTED = true;
-const float START_RATE = 100.0;            // full steps/s at the start and end of a run
+const float START_RATE = 10.0;             // full steps/s at the start and end of a run
 const long MAX_STEPS = 100000;             // 500 turns
 const float MAX_SECS = 120;
 
-struct Pump { const char *channel; uint8_t stepPin; uint8_t dirPin; bool forwardHigh; };
+// microsteps (last field) must match the cap under each driver: none = 1, middle pair = 4.
+// Keep this table the same as chemshield_uno's.
+struct Pump { const char *channel; uint8_t stepPin; uint8_t dirPin; bool forwardHigh; uint8_t microsteps; };
 Pump pumps[4] = {
-  {"ACID_BULK", 2, 5, true},
-  {"ACID_FINE", 3, 6, true},
-  {"BASE_BULK", 4, 7, true},
-  {"BASE_FINE", 12, 13, true},
+  {"ACID_BULK", 2, 5, true, 4},
+  {"ACID_FINE", 3, 6, true, 4},
+  {"BASE_BULK", 4, 7, true, 1},
+  {"BASE_FINE", 12, 13, true, 1},
 };
 
 // chemshield_uno's pump calibration in EEPROM (read only here)
@@ -52,8 +58,9 @@ float rate = 800.0, accel = 1600.0;        // full steps
 bool running = false;
 int8_t pump = -1;
 bool timed = false;                        // SECS: run until the time is up
+bool holding = false;                      // HOLD: energised, not stepping
 uint32_t target = 0, done = 0;             // microsteps
-unsigned long startMs = 0, runMs = 0, lastStepUs = 0;
+unsigned long startMs = 0, runMs = 0, lastStepUs = 0, lastReportMs = 0;
 float v = 0;                               // microsteps/s now
 
 char buf[48];
@@ -72,8 +79,9 @@ float mlFor(int8_t p, float fullSteps) {
 
 void finish(const __FlashStringHelper *word) {
   running = false;
+  holding = false;
   digitalWrite(PIN_ENABLE, HIGH);
-  float full = (float)done / MICROSTEPS;
+  float full = (float)done / pumps[pump].microsteps;
   Serial.print(word); Serial.print(pump + 1); Serial.print(','); Serial.print(pumps[pump].channel);
   Serial.print(','); Serial.print(full, 1); Serial.print(','); Serial.print(millis() - startMs);
   Serial.print(','); Serial.println(mlFor(pump, full), 3);
@@ -89,14 +97,14 @@ void start(int8_t p, long fullSteps, float secs) {
   if (timed) { runMs = (unsigned long)(secs * 1000); target = 0xFFFFFFFF; }
   else {
     if (fullSteps == 0 || fullSteps > MAX_STEPS) { Serial.println(F("ERROR,1-100000 steps")); return; }
-    target = (uint32_t)fullSteps * MICROSTEPS;
+    target = (uint32_t)fullSteps * pumps[p].microsteps;
   }
-  pump = p; done = 0; v = START_RATE * MICROSTEPS;
+  pump = p; done = 0; v = START_RATE * pumps[p].microsteps;
   bool high = pumps[p].forwardHigh != back;
   digitalWrite(pumps[p].dirPin, high ? HIGH : LOW);
   digitalWrite(PIN_ENABLE, LOW);
   delay(2);                                // drivers wake up
-  startMs = millis(); lastStepUs = micros(); running = true;
+  startMs = millis(); lastReportMs = startMs; lastStepUs = micros(); running = true;
   Serial.print(F("RUN,")); Serial.print(p + 1); Serial.print(','); Serial.print(pumps[p].channel);
   Serial.print(back ? F(",backwards,") : F(",forwards,"));
   if (timed) { Serial.print(secs, 1); Serial.println(F(" s")); }
@@ -105,7 +113,8 @@ void start(int8_t p, long fullSteps, float secs) {
 
 void info() {
   Serial.print(F("INFO,rate,")); Serial.print(rate, 0); Serial.print(F(",accel,")); Serial.print(accel, 0);
-  Serial.print(F(",microsteps,")); Serial.print(MICROSTEPS);
+  Serial.print(F(",microsteps"));
+  for (uint8_t i = 0; i < 4; i++) { Serial.print(','); Serial.print(pumps[i].microsteps); }
   Serial.print(F(",estop,")); Serial.println(estopPressed() ? F("PRESSED") : F("released"));
   for (uint8_t i = 0; i < 4; i++) {
     Serial.print(F("INFO,pump,")); Serial.print(i + 1); Serial.print(','); Serial.print(pumps[i].channel);
@@ -122,6 +131,19 @@ void handle(char *line) {
   if (!n) return;
   if (!strcmp(w[0], "STOP")) {
     if (running) finish(F("STOPPED,")); else Serial.println(F("OK,STOP"));
+  } else if (!strcmp(w[0], "HOLD") && n == 3) {
+    float secs = atof(w[2]);
+    if (running) Serial.println(F("ERROR,busy: STOP first"));
+    else if (estopPressed()) Serial.println(F("ERROR,E-stop pressed"));
+    else if (!(secs > 0) || secs > 60) Serial.println(F("ERROR,0-60 s"));
+    else if (atoi(w[1]) < 1 || atoi(w[1]) > 4) Serial.println(F("ERROR,pump 1-4"));
+    else {
+      pump = atoi(w[1]) - 1; done = 0; timed = true; holding = true;
+      runMs = (unsigned long)(secs * 1000);
+      digitalWrite(PIN_ENABLE, LOW);
+      startMs = millis(); lastReportMs = startMs; running = true;
+      Serial.print(F("HOLD,")); Serial.print(pump + 1); Serial.print(','); Serial.println(secs, 0);
+    }
   } else if (!strcmp(w[0], "STEPS") && n == 3) {
     start(atoi(w[1]) - 1, atol(w[2]), 0);
   } else if (!strcmp(w[0], "SECS") && n == 3) {
@@ -135,10 +157,10 @@ void handle(char *line) {
     else start(p, (long)(ml * pcal.stepsPerMl[p] + 0.5), 0);
   } else if (!strcmp(w[0], "RATE") && n == 2) {
     float r = atof(w[1]);
-    if (r >= START_RATE && r <= 2000) { rate = r; info(); } else Serial.println(F("ERROR,100-2000 full steps/s"));
+    if (r >= START_RATE && r <= 2000) { rate = r; info(); } else Serial.println(F("ERROR,10-2000 full steps/s"));
   } else if (!strcmp(w[0], "ACCEL") && n == 2) {
     float a = atof(w[1]);
-    if (a >= 100 && a <= 20000) { accel = a; info(); } else Serial.println(F("ERROR,100-20000"));
+    if (a >= 10 && a <= 20000) { accel = a; info(); } else Serial.println(F("ERROR,10-20000"));
   } else if (!strcmp(w[0], "MIX") && n == 2) {
     int pwm = atoi(w[1]);
     if (pwm >= 0 && pwm <= 255 && !estopPressed()) { mixer(pwm); Serial.print(F("OK,MIX,")); Serial.println(pwm); }
@@ -146,7 +168,7 @@ void handle(char *line) {
   } else if (!strcmp(w[0], "INFO") || !strcmp(w[0], "?")) {
     info();
   } else {
-    Serial.println(F("ERROR,commands: STEPS p n | SECS p s | ML p mL | RATE r | ACCEL a | MIX pwm | STOP | INFO"));
+    Serial.println(F("ERROR,commands: STEPS p n | SECS p s | ML p mL | HOLD p s | RATE r | ACCEL a | MIX pwm | STOP | INFO"));
   }
 }
 
@@ -185,9 +207,17 @@ void loop() {
   if (!running) return;
 
   unsigned long elapsed = millis() - startMs;
-  float a = accel * MICROSTEPS, vMin = START_RATE * MICROSTEPS, vTop = rate * MICROSTEPS;
+  uint8_t m = pumps[pump].microsteps;
+  float a = accel * m, vMin = START_RATE * m, vTop = rate * m;
   if (timed && elapsed >= runMs) { finish(F("DONE,")); return; }
   if (!timed && done >= target) { finish(F("DONE,")); return; }
+  if (holding) return;
+
+  if (millis() - lastReportMs >= 1000) {     // so the speed can be matched to what the pump does
+    lastReportMs += 1000;
+    Serial.print(F("SPEED,")); Serial.print((millis() - startMs) / 1000.0, 1);
+    Serial.print(','); Serial.println(v / m, 0);
+  }
 
   // one step when its time has come; the speed follows the ramp, step by step
   unsigned long nowUs = micros();

@@ -73,10 +73,11 @@ const float VREF = 5.0;                    // the Uno's ADC reference: its own 5
 const float DEFAULT_V7 = 2.50;
 const float DEFAULT_SLOPE_V_PER_PH = -0.177;
 
-// Pumps. MICROSTEPS must match the jumper caps under the drivers: none fitted = 1 (full
-// step); the planned caps = 4. Calibration and speeds are kept in FULL steps, so they stay
-// valid when MICROSTEPS changes.
-const uint8_t MICROSTEPS = 1;
+// Pumps. Each pump's microsteps (in pumps[] below) must match the jumper cap under its
+// driver: none = 1 (full step), one cap on the middle pair (A4988 MS2 / DRV8825 M1) = 4.
+// Full step resonates around 1 turn/s and loses steps; 1/4 step ran clean at 0.5-2 turns/s
+// on the bench (31 Oct). Calibration and speeds are kept in FULL steps, so they stay valid
+// when a pump's microsteps change.
 const float MAX_DOSE_ML = 20.0;            // S2: never more than 20 mL in one dose
 const float DEFAULT_STEPS_PER_ML = 200.0;  // PLACEHOLDER (about 1 mL per turn) until weighed
 const float DEFAULT_RATE = 800.0;          // full steps per second at the top of the ramp
@@ -96,12 +97,13 @@ struct Pump {
   uint8_t stepPin;
   uint8_t dirPin;
   bool forwardHigh;                        // DIR level that pushes liquid into the tank
+  uint8_t microsteps;                      // 1 = no cap under the driver, 4 = cap on the middle pair
 };
 Pump pumps[4] = {
-  {"ACID_BULK", 2, 5, true},
-  {"ACID_FINE", 3, 6, true},
-  {"BASE_BULK", 4, 7, true},
-  {"BASE_FINE", 12, 13, true},
+  {"ACID_BULK", 2, 5, true, 4},
+  {"ACID_FINE", 3, 6, true, 4},
+  {"BASE_BULK", 4, 7, true, 1},
+  {"BASE_FINE", 12, 13, true, 1},
 };
 
 // ------------------------------------------------------------------ calibration (EEPROM)
@@ -243,6 +245,12 @@ void calibrate(float bufferPh) {
 }
 
 // ------------------------------------------------------------------ pump calibration
+uint8_t maxMicrosteps() {
+  uint8_t m = 1;
+  for (uint8_t i = 0; i < 4; i++) if (pumps[i].microsteps > m) m = pumps[i].microsteps;
+  return m;
+}
+
 void pcalDefaults() {
   memset(&pcal, 0, sizeof(pcal));
   pcal.magic = PCAL_MAGIC;
@@ -254,7 +262,7 @@ void pcalDefaults() {
 void loadPumpCal() {
   EEPROM.get(PCAL_ADDR, pcal);
   bool ok = pcal.magic == PCAL_MAGIC && pcal.rate >= START_RATE && pcal.rate <= MAX_RATE_LIMIT
-            && pcal.rate * MICROSTEPS <= STEP_TICK_HZ / 2 && pcal.accel >= 100 && pcal.accel <= 20000;
+            && pcal.rate * maxMicrosteps() <= STEP_TICK_HZ / 2 && pcal.accel >= 100 && pcal.accel <= 20000;
   for (uint8_t i = 0; ok && i < 4; i++) ok = pcal.stepsPerMl[i] >= 10 && pcal.stepsPerMl[i] <= 20000;
   if (!ok) pcalDefaults();
 }
@@ -267,7 +275,9 @@ void showPumpCal() {
     Serial.println(pcal.have[i] ? F(",WEIGHED") : F(",PLACEHOLDER"));
   }
   Serial.print(F("PCAL,SPEED,")); Serial.print(pcal.rate, 0); Serial.print(',');
-  Serial.print(pcal.accel, 0); Serial.print(F(",MICROSTEPS,")); Serial.println(MICROSTEPS);
+  Serial.print(pcal.accel, 0); Serial.print(F(",MICROSTEPS"));
+  for (uint8_t i = 0; i < 4; i++) { Serial.print(','); Serial.print(pumps[i].microsteps); }
+  Serial.println();
 }
 
 void warnUncalibrated() {
@@ -341,7 +351,7 @@ uint32_t stepsSoFar() {
 }
 
 float mlFromSteps(uint8_t pump, uint32_t microsteps) {
-  return microsteps / (pcal.stepsPerMl[pump] * MICROSTEPS);
+  return microsteps / (pcal.stepsPerMl[pump] * pumps[pump].microsteps);
 }
 
 bool estopNow() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == HIGH; }
@@ -393,9 +403,10 @@ bool idleCheck(long seq) {                 // the checks every new dose must pas
 }
 
 void startPump(long seq, int8_t p, float ml) {
-  uint32_t target = (uint32_t)(ml * pcal.stepsPerMl[p] * MICROSTEPS + 0.5);
+  uint8_t m = pumps[p].microsteps;
+  uint32_t target = (uint32_t)(ml * pcal.stepsPerMl[p] * m + 0.5);
   // the whole dose at the top speed, plus both ramps and 5 s to spare, must fit in MAX_RUN_MS
-  unsigned long expectMs = (unsigned long)(1000.0 * target / (pcal.rate * MICROSTEPS)
+  unsigned long expectMs = (unsigned long)(1000.0 * target / (pcal.rate * m)
                                            + 2000.0 * pcal.rate / pcal.accel) + 5000;
   if (target == 0) { reject(seq, F("BAD")); return; }
   if (expectMs > MAX_RUN_MS) { reject(seq, F("TOO_LONG")); return; }
@@ -409,7 +420,7 @@ void startPump(long seq, int8_t p, float ml) {
     stepMask = digitalPinToBitMask(pumps[p].stepPin);
     stepAcc = 0; stepsDone = 0; stepsTarget = target; stepRunning = true;
   }
-  rampRate = START_RATE * MICROSTEPS;
+  rampRate = START_RATE * m;
   setStepRate(rampRate);
   digitalWrite(PIN_ENABLE, LOW);
   timer2Start();
@@ -422,9 +433,10 @@ void rampPump(unsigned long now) {
   if (now - lastRampAt < RAMP_MS) return;
   float dt = (now - lastRampAt) / 1000.0;
   lastRampAt = now;
-  float a = pcal.accel * MICROSTEPS;
-  float vTop = pcal.rate * MICROSTEPS;
-  float vMin = START_RATE * MICROSTEPS;
+  uint8_t m = pumps[pumpIdx].microsteps;
+  float a = pcal.accel * m;
+  float vTop = pcal.rate * m;
+  float vMin = START_RATE * m;
   float left = (float)stepsTarget - stepsSoFar();
   if (left <= (rampRate * rampRate - vMin * vMin) / (2 * a)) rampRate -= a * dt;
   else rampRate += a * dt;
@@ -499,7 +511,7 @@ void handleLine(char *line) {
       pcalDefaults(); EEPROM.put(PCAL_ADDR, pcal); showPumpCal();
     } else if (!strcmp(parts[1], "SPEED") && n > 3) {
       float r = atof(parts[2]), a = atof(parts[3]);
-      if (r < START_RATE || r > MAX_RATE_LIMIT || r * MICROSTEPS > STEP_TICK_HZ / 2 || a < 100 || a > 20000) {
+      if (r < START_RATE || r > MAX_RATE_LIMIT || r * maxMicrosteps() > STEP_TICK_HZ / 2 || a < 100 || a > 20000) {
         Serial.println(F("PCAL,ERROR,speed 100-2000 full steps/s, accel 100-20000"));
         return;
       }

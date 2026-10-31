@@ -37,12 +37,18 @@ Things to know about the shield (Protoneer CNC Shield V3.00, checked against a p
   D12/D13. Leave those two header pins empty.
 - On the end-stop header the white row is the signal and the black row is GND; X+ and X-
   are both D9, Y+ and Y- both D10. The L298N's GND must also go to a black (GND) pin.
-- **Microstepping.** No jumper caps under the drivers = full step (200 steps per turn).
-  `MICROSTEPS` at the top of both sketches must match the caps: 1 now; set it to 4 in both
-  sketches once caps for 1/4 step are fitted (on both driver types that is MS2 only). The
-  pump calibration and speeds are stored in full steps, so they stay valid.
+- **Microstepping: fit one cap per driver.** With no cap a driver runs full step (200 steps
+  per turn), and on the bench (31 Oct) the pumps resonated around 1 turn/s: they jittered
+  and lost steps (8 of 10 turns), while 0.5 and 2 turns/s were clean. With one cap on the
+  middle pair under the driver (A4988 MS2, DRV8825 M1) = 1/4 step, 0.5, 1 and 2 turns/s all
+  counted exactly (5/5, 10/10, 20/20). The last field of each `pumps[]` entry (`microsteps`,
+  1 or 4) must match that driver's cap, in both sketches. The pump calibration and speeds are
+  stored in full steps, so they stay valid when a cap is added.
+- **Current.** At the 27 Oct settings (A4988 0.80 V, DRV8825 0.50 V) the pumps rocked in place
+  under the tube's load. With the Y A4988 at 1.10 V (about 1.37 A trip, about 0.97 A per coil
+  RMS, the motor's 1 A rating) it turned. The DRV8825 equivalent is about 0.69 V.
 - **Direction.** If a pump runs backwards, flip its `true` to `false` in the `pumps[]` table
-  (the last field, `forwardHigh`) in both sketches, or swap one coil pair on that motor.
+  (the `forwardHigh` field) in both sketches, or swap one coil pair on that motor.
 - **At power-up and during upload** the Uno's pins float for a second or two, and the A4988
   and DRV8825 pull their own ENABLE low, so the drivers can be energised (holding torque, no
   stepping) until the sketch starts. Upload with the 24 V off. If the motors hold (feel stiff)
