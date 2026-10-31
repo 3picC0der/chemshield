@@ -44,9 +44,16 @@ Things to know about the shield (Protoneer CNC Shield V3.00, checked against a p
   counted exactly (5/5, 10/10, 20/20). The last field of each `pumps[]` entry (`microsteps`,
   1 or 4) must match that driver's cap, in both sketches. The pump calibration and speeds are
   stored in full steps, so they stay valid when a cap is added.
-- **Current.** At the 27 Oct settings (A4988 0.80 V, DRV8825 0.50 V) the pumps rocked in place
-  under the tube's load. With the Y A4988 at 1.10 V (about 1.37 A trip, about 0.97 A per coil
-  RMS, the motor's 1 A rating) it turned. The DRV8825 equivalent is about 0.69 V.
+- **Current.** At the 27 Oct settings (A4988 0.80 V, DRV8825 0.50 V) and full step the pumps
+  rocked in place; at 1.10 V (A4988) they turned, and the caps fixed the resonance. But all
+  four drivers share one enable pin (D8): whenever any pump runs, all four motors and drivers
+  carry current, even the three that stand still. On 31 Oct, about 130 s of bench tests in
+  4 minutes at about 1.3 A on every driver made a heatsink very hot, with a smell. Use A4988
+  about 0.88 V and DRV8825 about 0.55 V (about 1.1 A trip) with the caps, keep bench runs
+  short (about 10 s, then a pause), and raise the current only if a pump loses steps. Real
+  doses are about 5 s with at least 15 s off (the mixing wait). Both sketches switch the
+  drivers off (D8 HIGH) after every run; during a reset or upload they float on for 1-2 s
+  (see below).
 - **Direction.** If a pump runs backwards, flip its `true` to `false` in the `pumps[]` table
   (the `forwardHigh` field) in both sketches, or swap one coil pair on that motor.
 - **At power-up and during upload** the Uno's pins float for a second or two, and the A4988
