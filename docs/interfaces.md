@@ -1,7 +1,8 @@
 # Interfaces
 
 An interface is where one person's code hands data to another's. These are the formats the
-code uses as of 1 Oct (the PPR rig: hand dosing, real pH probe on the Uno). The laptop HMI
+code uses as of 31 Oct (the Final Prototype: the Uno runs 4 stepper pumps on a CNC Shield V3
+and the mixer; the PPR rig's hand dosing still works with `--dosing hand`). The laptop HMI
 and the Pi station both import `hmi/common.py`, so the command format, the key and the
 reason words can't drift between them. Change a format here and in the code together, and
 tell the other owner.
@@ -78,7 +79,8 @@ probe data, a missing model file or any error gives `UNCERTAIN_CONTEXT` (fail cl
 `redosing.planner.plan_next_dose(state)`. Input: an I2 state message. Output:
 `{"action": "DOSE", "channel_id": "BASE_BULK", "dose_ml": 11.8}` or
 `{"action": "ESCALATE", "reason": "INFEASIBLE"}`. The station sends each DOSE to the gateway
-as an I1 `RECOVERY_DOSE` (with `volume_ml`), and the operator adds it by hand.
+as an I1 `RECOVERY_DOSE` (with `volume_ml`); once accepted, the Uno pumps it (or, with
+`--dosing hand`, the operator adds it by hand).
 
 ## I5: Uno link (station ↔ Uno over USB serial, 115200 baud). Owners: Belal + Khalid
 
@@ -87,21 +89,33 @@ One line per message, ending in `\n`. The firmware is `firmware/uno/chemshield_u
 
 | Pi → Uno | Meaning | Uno answers |
 |---|---|---|
-| `HB` | heartbeat, every 0.5 s | nothing. After 2 s without one: light off, dose ended, `HB_LOST` |
-| `DOSE,<seq>,<pump 1-4>,<run_ms>` | dose approved: light on for `run_ms` (pump 1 NaOH bulk, 2 NaOH fine, 3 HCl bulk, 4 HCl fine) | `OK,<seq>`, then `DONE,<seq>,<ms>`; or `REJECT,<seq>,<ESTOP\|HALTED\|NO_HB\|BUSY\|TOO_LONG\|BAD>` |
-| `STOP` | the operator pressed DOSE ADDED or cancelled: light off | `OK,STOP` |
-| `MODE,NORMAL` / `MODE,RECOVERY` / `MODE,HALT` | light off / slow blink / fast blink | `OK,MODE,<mode>` (the station times this for INT-S1) |
+| `HB` | heartbeat, every 0.5 s | nothing. After 2 s without one: pump and mixer stopped, light off, `HB_LOST` |
+| `PUMP,<seq>,<CHANNEL>,<mL>` | dose approved: run the `ACID_BULK`/`ACID_FINE`/`BASE_BULK`/`BASE_FINE` pump for mL | `OK,<seq>`, then `DONE,<seq>,<CHANNEL>,<mL delivered>` or `ABORT,<seq>,<CHANNEL>,<mL delivered>,<STOP\|ESTOP\|HB_LOST\|HALT\|RECOVERY\|TIMEOUT>`; or `REJECT,<seq>,<ESTOP\|HALTED\|NO_HB\|BUSY\|TOO_MUCH\|TOO_LONG\|BAD>` |
+| `DOSE,<seq>,<pump 1-4>,<run_ms>` | hand dosing (PPR): light on for `run_ms`, no pump moves | `OK,<seq>`, then `DONE,<seq>,<ms>`; or `REJECT,<seq>,<ESTOP\|HALTED\|NO_HB\|BUSY\|TOO_LONG\|BAD>` |
+| `STOP` | stop the pump / light now | `ABORT,...` if a pump was running, then `OK,STOP` |
+| `MODE,NORMAL` / `MODE,RECOVERY` / `MODE,HALT` | light off / slow blink / fast blink; a running pump stops when the mode changes to RECOVERY or HALT | `OK,MODE,<mode>` (the station times this for INT-S1) |
+| `MIX,<0-255>` | mixer speed between doses (0 = off) | `OK,MIX,<pwm>` |
 | `STATUS` | | `STATUS,<estop 0/1>,<busy 0/1>` |
+
+Pump numbers (the shield slots, and `<pump>` in `DOSE`): 1 `ACID_BULK` (X), 2 `ACID_FINE` (Y),
+3 `BASE_BULK` (Z), 4 `BASE_FINE` (A); `CHANNELS` in `hmi/common.py` carries them. `<mL
+delivered>` is counted from the steps the Uno actually made, with the pump's stored
+calibration (full steps per mL).
 
 | Uno → Pi, unasked | |
 |---|---|
 | `PH,<pH>` | once a second, the calibrated probe reading. Any line counts as "alive"; 2 s of silence = link lost, and the station halts |
 | `STATUS,1,0` / `STATUS,0,0` | the E-stop was pressed (the station halts at once) / released |
-| `READY,...`, `HB_LOST`, `WARN,...` | start-up, heartbeat lost, wiring warning: logged |
+| `READY,...`, `HB_LOST`, `WARN,...` | start-up, heartbeat lost, wiring or calibration warning (`WARN,PUMP_NOT_CALIBRATED,<channels>`) |
 
-Calibration lines (`CAL,<buffer pH>`, `CAL,SHOW`, `CAL,CLEAR`, `V`) are used only with the
-station stopped, through `firmware/uno/uno_tool.py`.
+Calibration lines (`CAL,<buffer pH>`, `CAL,SHOW`, `CAL,CLEAR`, `V`; `PCAL,SHOW`, `PCAL,CLEAR`,
+`PCAL,<pump>,<full steps per mL>`, `PCAL,SPEED,<full steps/s>,<full steps/s²>`) are used
+only with the station stopped, through `firmware/uno/uno_tool.py`.
 
-With hand dosing the Uno does not enforce the 20 mL cap, the 15 s wait or the 50 mmol limit:
-the gateway on the Pi does, before a dose ever reaches the Uno. `run_ms` only sets how long
-the light stays on (`--hand-speed`, mL/s, on the station).
+The gateway on the Pi enforces the 20 mL cap, the 15 s wait and the 50 mmol limit before a
+dose ever reaches the Uno. The Uno is the last gate behind it: one pump at a time, never
+over 20 mL or 60 s, never with the E-stop pressed, in HALT or without the heartbeat, and the
+drivers are switched off whenever no pump runs. The station counts a pump dose as added only
+on `DONE` and logs the delivered mL in the audit log (`DOSE_ADDED`, or `PUMP_STOPPED` after
+an `ABORT`). With `--dosing hand`, `run_ms` only sets how long the light stays on
+(`--hand-speed`, mL/s).

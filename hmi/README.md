@@ -20,8 +20,11 @@ it, and it is where INT-S1, S2, S4, C3, S6/INT-S2, S1 and S3 are read off during
 - **Pi:** runs the station. The gateway checks every request (signature, freshness,
   20 mL, 15 s lockout, 50 mmol, Model A) and writes the audit log. The station also
   watches the pH, switches to RECOVERY on an unsafe event and runs the planner.
-- **Uno:** sends `PH,7.02` once a second over the USB cable and turns its light on when a
-  dose is approved. You are the pump: you add that dose with a syringe and press DOSE ADDED.
+- **Uno:** sends `PH,7.02` once a second over the USB cable. On the Final Prototype it runs
+  the approved pump for exactly the approved mL (CNC Shield V3, 4 stepper pumps), runs the
+  mixer, and reports what the pump delivered; the dose counts as added only when it says
+  `DONE`. On the PPR rig (`--dosing hand`) it only lights the dose light: you add the dose
+  with a syringe and press DOSE ADDED.
 
 Everything the laptop sends goes through the gateway on the Pi, which is the C2 story.
 
@@ -51,7 +54,8 @@ pulls the "USB cable" and sends test attacks. Stop with Ctrl+C.
    .venv/bin/python -m hmi.station --ph-source uno --port "${CHEMSHIELD_HMI_PORT:-8000}"
    ```
 
-   It finds the Uno by itself (`/dev/ttyACM0`); `--serial-port` picks one. This is the only
+   It finds the Uno by itself (`/dev/ttyACM0`); `--serial-port` picks one. The Uno runs the
+   pumps (`--dosing pump`, the default); `--dosing hand` is the PPR rig's syringe flow. This is the only
    port the firewall opens besides SSH (`gateway/firewall/raspberry_pi_firewall_template.sh`
    reads the same variable). To show the rig without the probe, use `--ph-source sim`: the
    HMI then says SIMULATED.
@@ -88,7 +92,7 @@ port and prints its name; start the station with `--serial-port <that name>`. Ty
 | Recovery plan | The MILP's doses with status (dose now, mixing 12 s, complete), reagent vs 50 mmol, time vs 300 s, predicted pH after the plan, "why this plan" | C3, S6, INT-S2 |
 | Evidence tabs | Recovery-mode timing per event (PASS under 2 s), the 10-minute pH hold (S1) with its CSV, and Model A timing per request | INT-S1, S1, S4 |
 | Operator action | HALT DOSING, RESUME DOSING (the operator reset), ACKNOWLEDGE | SUS tasks 3-4; INT-AT-04 |
-| Dose now | "Add 10 mL of NaOH 0.5 M bulk now, then stir", DOSE ADDED and "Not added" | S2 with hand dosing |
+| Dose now | Pumps: "Pump 3 is adding 10 mL of NaOH 0.5 M bulk", STOP THE PUMP. Hand: "Add 10 mL ... now, then stir", DOSE ADDED and "Not added" | S2 |
 | Manual dose | Bottle, mL, REQUEST DOSE; the gateway's answer inline, in words, with the code | S2, C3; SUS task 2 |
 | Safety state | Gateway-only path, Uno link, Uno light, mixing lockout, Model A, audit chain, E-stop | C2 |
 | Audit log | Every decision and event, newest first, "rejected only" filter, counters by reason, CSV/JSONL export, chain check | S3; SUS task 5 |
@@ -119,20 +123,37 @@ For the batch version of INT-S1: `python -m hmi.int_s1_batch --events 100` write
 ## Uno lines (what the firmware must speak)
 
 USB serial, 115200 baud, one line per message ending in `\n`. This is I5 from
-`docs/interfaces.md` plus `MODE`, `STOP` and `PH`. `hmi/mock_uno.py` is a working reference.
+`docs/interfaces.md`. `hmi/mock_uno.py` is a working reference; the firmware is
+`firmware/uno/chemshield_uno/`.
 
 | Pi → Uno | Meaning | Uno answers |
 |---|---|---|
-| `HB` | heartbeat, every 0.5 s | nothing. After 2 s with no `HB`: light off, stop, send `HB_LOST` |
-| `DOSE,<seq>,<pump 1-4>,<run_ms>` | dose approved: light the dose light for `run_ms` (pump 1 NaOH bulk, 2 NaOH fine, 3 HCl bulk, 4 HCl fine) | `OK,<seq>`, then `DONE,<seq>,<ms>`; or `REJECT,<seq>,<reason>` if halted, busy or E-stop |
-| `STOP` | the operator pressed DOSE ADDED or cancelled: light off | `OK,STOP` |
-| `MODE,NORMAL` / `MODE,RECOVERY` / `MODE,HALT` | light pattern: off / slow blink (dosing locked) / fast blink | `OK,MODE,<mode>` (the station times this for INT-S1) |
+| `HB` | heartbeat, every 0.5 s | nothing. After 2 s with no `HB`: pump and mixer stopped, light off, `HB_LOST` |
+| `PUMP,<seq>,<CHANNEL>,<mL>` | dose approved (Final Prototype): run that channel's pump for mL. `CHANNEL` is `ACID_BULK`, `ACID_FINE`, `BASE_BULK` or `BASE_FINE` | `OK,<seq>`, then `DONE,<seq>,<CHANNEL>,<mL delivered>` or `ABORT,<seq>,<CHANNEL>,<mL delivered>,<reason>`; or `REJECT,<seq>,<reason>` |
+| `DOSE,<seq>,<pump 1-4>,<run_ms>` | dose approved (PPR hand dosing): light the dose light for `run_ms`, no pump moves | `OK,<seq>`, then `DONE,<seq>,<ms>`; or `REJECT,<seq>,<reason>` |
+| `STOP` | stop the pump / light now (the operator cancelled, or the station halted) | an `ABORT` line if a pump was running, then `OK,STOP` |
+| `MODE,NORMAL` / `MODE,RECOVERY` / `MODE,HALT` | light pattern: off / slow blink (dosing locked) / fast blink. A pump running when the mode changes to RECOVERY or HALT stops (`ABORT`) | `OK,MODE,<mode>` (the station times this for INT-S1) |
+| `MIX,<0-255>` | mixer speed between doses (0 = off) | `OK,MIX,<pwm>` |
 | `STATUS` | | `STATUS,<estop 0/1>,<busy 0/1>` |
+
+Pumps 1-4 are wired 1 `ACID_BULK` (X), 2 `ACID_FINE` (Y), 3 `BASE_BULK` (Z), 4 `BASE_FINE` (A).
+`REJECT` reasons: `ESTOP`, `HALTED`, `NO_HB`, `BUSY` (one pump at a time), `TOO_MUCH` (over
+20 mL), `TOO_LONG` (over 60 s), `BAD`. `ABORT` reasons: `STOP`, `ESTOP`, `HB_LOST`, `HALT`,
+`RECOVERY`, `TIMEOUT`. The mixer runs during each pump dose and for 15 s after it by itself.
+In RECOVERY the Uno still accepts `PUMP`: those are the planner's doses (the gateway locks
+the operator's).
+
+**With pumps a dose counts as added only on `DONE`.** The station then logs `DOSE_ADDED`
+with the mL the Uno counted from its steps, tells Model A that volume, and starts the 15 s
+mixing wait. After an `ABORT` the dose is cancelled, a `PUMP_STOPPED` record logs what went
+in, and if anything did the 15 s wait starts anyway. A pump that has not finished after 75 s
+is stopped. DOSE ADDED on the screen is refused for a pump dose.
 
 | Uno → Pi, unasked | |
 |---|---|
 | `PH,<value>` | once a second, the calibrated probe reading (any line also counts as "alive") |
 | `STATUS,1,0` | the E-stop was pressed: the station halts at once |
+| `WARN,PUMP_NOT_CALIBRATED,...` | at start-up, pumps still on the placeholder steps per mL |
 
 ## Files
 
@@ -163,5 +184,6 @@ USB serial, 115200 baud, one line per message ending in `\n`. This is I5 from
   lets the planner try again. Model A also correctly blocked some planner doses that would
   have overshot (for example 20 mL of base at pH 3.2, which would end at pH 9.9).
 - **The event closes** when the pH has stayed inside 6.0-8.5 for 60 s (`--dwell`).
-- **Hand-dose speed** (`--hand-speed`, mL/s) only sets how long the Uno's light stays on.
+- **Hand-dose speed** (`--hand-speed`, mL/s) only sets how long the Uno's light stays on
+  with `--dosing hand`.
 - The pH table is still the PLACEHOLDER until CHE's Aspen file lands; the screen says which.
