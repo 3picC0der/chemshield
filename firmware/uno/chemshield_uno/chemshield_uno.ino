@@ -562,8 +562,11 @@ void setup() {
 }
 
 void loop() {
-  unsigned long now = millis();
+  // Read the Pi's lines first, then the clock: a line handled here stamps millis() (HB,
+  // a new dose), and a "now" taken before that could be 1 ms older, so now - stamp would
+  // wrap to ~49 days and fire HB_LOST or TIMEOUT at once.
   readSerial();
+  unsigned long now = millis();
 
   // E-stop: NC contact to GND, so pressed (or a loose wire) reads HIGH. A running pump
   // stops on the first HIGH reading; the STATUS line waits for the debounce.
