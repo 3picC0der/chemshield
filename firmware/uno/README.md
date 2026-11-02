@@ -23,7 +23,7 @@ without the Pi's heartbeat, and the drivers are off (D8 HIGH) whenever no pump r
 | pH board Po | A0 (Abort). V+ to 5V, G to GND; leave To and Do empty |
 | E-stop normally-closed contact | A1 (Hold), other side to GND. The E-stop also cuts the 24 V |
 | Dose light | A2 (Resume), through 220 Ω to 1 kΩ to the LED's long leg; short leg to GND |
-| Mixer, L298N | ENA from D9 (X end-stop signal pin, PWM), IN1 from D10 (Y end-stop signal pin), IN2 to GND |
+| Mixer, L298N | ENA from D9 (X end-stop signal pin, PWM; ENA jumper removed), IN1 from D10 (Y end-stop signal pin), IN2 to GND; 12V terminal from the 24 V supply (see "The mixer") |
 
 Never use D0 or D1: they carry the USB serial. D13 is pump 4's DIR now, so the board's "L"
 light just follows that pin; it no longer copies the dose light. With A1 left open the Uno
@@ -48,10 +48,14 @@ Things to know about the shield (Protoneer CNC Shield V3.00, checked against a p
   rocked in place; at 1.10 V (A4988) they turned, and the caps fixed the resonance. But all
   four drivers share one enable pin (D8): whenever any pump runs, all four motors and drivers
   carry current, even the three that stand still. On 31 Oct, about 130 s of bench tests in
-  4 minutes at about 1.3 A on every driver made a heatsink very hot, with a smell. Use A4988
-  about 0.88 V and DRV8825 about 0.55 V (about 1.1 A trip) with the caps, keep bench runs
-  short (about 10 s, then a pause), and raise the current only if a pump loses steps. Real
-  doses are about 5 s with at least 15 s off (the mixing wait). Both sketches switch the
+  4 minutes at about 1.3 A on every driver made a heatsink very hot, with a smell. On 2 Nov,
+  at about 1.1 A (DRV8825 0.56 V) pump 1 jittered and lost about 2 of 5 turns at 0.5 rps
+  and was rough up to 2 rps; small doses never reach the 4 rps top speed, so that matters.
+  At about 1.3 A it was smooth at every speed. Set now (sense resistors R100):
+  X 0.66 V and Z 0.656 V (DRV8825, I = 2 x Vref), Y 1.04 V and A 1.076 V (A4988,
+  I = Vref / 0.8). With runs of about 20 s and 20 s pauses the DRV8825 heatsinks got warm
+  (finger-comfortable) and the A4988s stayed cool. Keep bench runs short (about 10-20 s,
+  then a pause). Real doses are about 5 s with at least 15 s off (the mixing wait). Both sketches switch the
   drivers off (D8 HIGH) after every run; during a reset or upload they float on for 1-2 s
   (see below).
 - **Direction.** If a pump runs backwards, flip its `true` to `false` in the `pumps[]` table
@@ -72,10 +76,18 @@ Things to know about the shield (Protoneer CNC Shield V3.00, checked against a p
 
 ## The mixer
 
-The Uno runs the mixer (PWM 180 of 255, `MIX_DOSE_PWM`) while a pump runs and for 15 s
-afterwards (the system's mixing wait), and at the `MIX,<0-255>` setting the rest of the
-time (0 by default). The E-stop and a lost heartbeat switch it off. If 180 is too fast or
-too weak for the stirrer, change `MIX_DOSE_PWM`.
+**Supply.** The L298N's 12V terminal is fed straight from the 24 V supply (after the 3 A
+fuse); there is no step-down. The board bought as a step-down turned out to be a step-up
+(minimum 23.7 V). The L298N's 5V-EN jumper stays on. The mixer is a 12 V motor (5840-31ZY
+worm gear, 400 rpm), so both sketches cap the PWM at `MIX_PWM_MAX` = 128 of 255 (50 %,
+about 11 V average after the L298N's drop of about 2 V). Every mixer request is clamped to
+it, and `OK,MIX,<pwm>` reports the value actually used. If a real 24 V to 12 V step-down
+(LM2596 or XL4015) is fitted later, the cap can go back up to 255.
+
+The Uno runs the mixer (PWM 90 of 255, `MIX_DOSE_PWM`, about 7-8 V average) while a pump
+runs and for 15 s afterwards (the system's mixing wait), and at the `MIX,<0-255>` setting
+the rest of the time (0 by default). The E-stop and a lost heartbeat switch it off. If 90 is
+too fast or too weak for the stirrer, change `MIX_DOSE_PWM` (at most `MIX_PWM_MAX`).
 
 ## Compile and flash
 
@@ -109,7 +121,7 @@ INFO                 settings, E-stop state and any calibration already stored
 STEPS 1 200          pump 1 one turn forwards        STEPS 1 -200   one turn backwards
 SECS 2 10            pump 2 for 10 s at the top speed
 RATE 400             a slower top speed (default 800 full steps/s); ACCEL 800 a gentler ramp
-STOP                 stop now                        MIX 150 / MIX 0   mixer on / off
+STOP                 stop now                        MIX 60 / MIX 0    mixer on / off (max 128)
 ML 1 5               5 mL with the calibration stored by chemshield_uno (to check it)
 ```
 

@@ -15,7 +15,7 @@
 //   HOLD <pump 1-4> <s>      drivers on, no steps, for s seconds (max 60): both coils carry
 //                            a steady current, so a meter on DC volts across 2B-2A and across
 //                            1A-1B reads about I x R (roughly 2-3 V each); 0 V = that coil gets nothing
-//   MIX <0-255>              mixer speed (0 = off)          STOP   stop now
+//   MIX <0-255>              mixer speed (0 = off, capped at 128) STOP stop now
 //   INFO                     settings and the stored calibration
 // It answers RUN,... when a run starts and DONE,<pump>,<channel>,<full steps>,<ms>,<mL by the
 // stored calibration> (or STOPPED,... after STOP or the E-stop) when it ends. The drivers are
@@ -32,6 +32,8 @@ const uint8_t PIN_ENABLE = 8;
 const uint8_t PIN_ESTOP = A1;
 const uint8_t PIN_MIX_PWM = 9;
 const uint8_t PIN_MIX_IN1 = 10;
+// The L298N runs from the 24 V supply, the mixer motor is 12 V: never more than 50 % PWM.
+const uint8_t MIX_PWM_MAX = 128;
 const bool ESTOP_FITTED = true;
 const float START_RATE = 10.0;             // full steps/s at the start and end of a run
 const long MAX_STEPS = 100000;             // 500 turns
@@ -69,6 +71,7 @@ uint8_t len = 0;
 bool estopPressed() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == HIGH; }
 
 void mixer(int pwm) {
+  if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;
   digitalWrite(PIN_MIX_IN1, pwm ? HIGH : LOW);
   analogWrite(PIN_MIX_PWM, pwm);
 }
@@ -163,7 +166,10 @@ void handle(char *line) {
     if (a >= 10 && a <= 20000) { accel = a; info(); } else Serial.println(F("ERROR,10-20000"));
   } else if (!strcmp(w[0], "MIX") && n == 2) {
     int pwm = atoi(w[1]);
-    if (pwm >= 0 && pwm <= 255 && !estopPressed()) { mixer(pwm); Serial.print(F("OK,MIX,")); Serial.println(pwm); }
+    if (pwm >= 0 && pwm <= 255 && !estopPressed()) {
+      if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;
+      mixer(pwm); Serial.print(F("OK,MIX,")); Serial.println(pwm);
+    }
     else Serial.println(F("ERROR,MIX 0-255, E-stop released"));
   } else if (!strcmp(w[0], "INFO") || !strcmp(w[0], "?")) {
     info();
