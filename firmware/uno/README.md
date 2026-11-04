@@ -76,12 +76,13 @@ Things to know about the shield (Protoneer CNC Shield V3.00, checked against a p
 
 ## The mixer
 
-**Supply.** The L298N's 12V terminal runs from a ZK-12KX buck-boost converter set to 12.0 V
-(fed from the 24 V after the 3 A fuse), because the mixer is a 12 V motor (5840-31ZY worm
-gear, 400 rpm). The L298N's 5V-EN jumper stays on. Never feed the L298N straight from 24 V:
-with this firmware PWM 255 would put about 22 V on the motor. The first board bought as a
-step-down was a step-up (minimum 23.7 V), so it is not used. A 12 V fan over the two DRV8825s
-shares the converter's output.
+**Supply.** A 3 A fuse sits in the 24 V + line. After it, an HW-140 buck-boost converter
+(input 5.5-30 V) makes 12.0 V for the L298N's 12V terminal, because the mixer is a 12 V motor
+(5840-31ZY worm gear, 400 rpm). The L298N's 5V-EN jumper stays on. Never feed the L298N
+straight from 24 V: PWM 255 would put about 22 V on the motor (if that ever has to change,
+lower `MIX_PWM_MAX` in both sketches). The first board bought as a step-down was a step-up
+(minimum 23.7 V), so it is not used. A 12 V, 40 mm fan on the converter's output blows on the
+two DRV8825s (X and Z), which run warmer than the A4988s.
 
 The Uno runs the mixer (PWM 180 of 255, `MIX_DOSE_PWM`) while a pump runs and for 15 s
 afterwards (the system's mixing wait), and at the `MIX,<0-255>` setting the rest of the

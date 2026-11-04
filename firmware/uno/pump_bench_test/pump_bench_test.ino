@@ -32,6 +32,8 @@ const uint8_t PIN_ENABLE = 8;
 const uint8_t PIN_ESTOP = A1;
 const uint8_t PIN_MIX_PWM = 9;
 const uint8_t PIN_MIX_IN1 = 10;
+// The L298N is fed 12 V from the HW-140 converter: lower this if it ever gets more than 12 V.
+const uint8_t MIX_PWM_MAX = 255;
 const bool ESTOP_FITTED = true;
 const float START_RATE = 10.0;             // full steps/s at the start and end of a run
 const long MAX_STEPS = 100000;             // 500 turns
@@ -69,6 +71,7 @@ uint8_t len = 0;
 bool estopPressed() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == HIGH; }
 
 void mixer(int pwm) {
+  if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;
   digitalWrite(PIN_MIX_IN1, pwm ? HIGH : LOW);
   analogWrite(PIN_MIX_PWM, pwm);
 }
@@ -163,7 +166,10 @@ void handle(char *line) {
     if (a >= 10 && a <= 20000) { accel = a; info(); } else Serial.println(F("ERROR,10-20000"));
   } else if (!strcmp(w[0], "MIX") && n == 2) {
     int pwm = atoi(w[1]);
-    if (pwm >= 0 && pwm <= 255 && !estopPressed()) { mixer(pwm); Serial.print(F("OK,MIX,")); Serial.println(pwm); }
+    if (pwm >= 0 && pwm <= 255 && !estopPressed()) {
+      if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;
+      mixer(pwm); Serial.print(F("OK,MIX,")); Serial.println(pwm);
+    }
     else Serial.println(F("ERROR,MIX 0-255, E-stop released"));
   } else if (!strcmp(w[0], "INFO") || !strcmp(w[0], "?")) {
     info();

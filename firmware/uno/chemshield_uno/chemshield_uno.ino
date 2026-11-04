@@ -35,7 +35,8 @@
 //                                   that is running when the mode changes to HALT or RECOVERY
 //                                   stops (ABORT ...,HALT / ...,RECOVERY). In RECOVERY new PUMP
 //                                   lines are still accepted: they are the planner's doses.
-//   MIX,<0-255>                     mixer speed when no dose is running (0 = off) -> "OK,MIX,<pwm>"
+//   MIX,<0-255>                     mixer speed when no dose is running (0 = off, capped at
+//                                   MIX_PWM_MAX) -> "OK,MIX,<pwm actually used>"
 //   STATUS                          -> "STATUS,<estop 0/1>,<busy 0/1>"
 // Uno -> Pi, unasked
 //   PH,<pH>                         once a second, the calibrated reading (mean of ~50 samples)
@@ -89,6 +90,9 @@ const unsigned long STEP_TICK_HZ = 20000;  // Timer2 interrupt; the step rate ca
 
 // Mixer: runs at MIX_DOSE_PWM while a pump runs and for MIX_AFTER_MS afterwards (the
 // system's 15 s mixing wait), and at the MIX,<pwm> setting the rest of the time.
+// The L298N is fed 12 V from the HW-140 converter, so the 12 V motor can take the full range.
+// setMixer() clamps every request to MIX_PWM_MAX: lower it if the L298N ever gets more than 12 V.
+const uint8_t MIX_PWM_MAX = 255;
 const uint8_t MIX_DOSE_PWM = 180;
 const unsigned long MIX_AFTER_MS = 15000;
 
@@ -295,6 +299,7 @@ void warnUncalibrated() {
 void setLight(bool on) { digitalWrite(PIN_LIGHT, on ? HIGH : LOW); }
 
 void setMixer(uint8_t pwm) {
+  if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;
   if (pwm == mixNow) return;
   mixNow = pwm;
   digitalWrite(PIN_MIX_IN1, pwm ? HIGH : LOW);
@@ -488,7 +493,7 @@ void handleLine(char *line) {
   } else if (!strcmp(head, "MIX") && n > 1) {
     int pwm = atoi(parts[1]);
     if (pwm < 0 || pwm > 255) { Serial.println(F("ERROR,MIX,0-255")); return; }
-    mixManual = estop ? 0 : pwm;
+    mixManual = estop ? 0 : min(pwm, (int)MIX_PWM_MAX);
     Serial.print(F("OK,MIX,")); Serial.println(mixManual);
   } else if (!strcmp(head, "STATUS")) {
     Serial.print(F("STATUS,")); Serial.print(estop ? 1 : 0); Serial.print(',');
