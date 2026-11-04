@@ -35,8 +35,7 @@
 //                                   that is running when the mode changes to HALT or RECOVERY
 //                                   stops (ABORT ...,HALT / ...,RECOVERY). In RECOVERY new PUMP
 //                                   lines are still accepted: they are the planner's doses.
-//   MIX,<0-255>                     mixer speed when no dose is running (0 = off, capped at
-//                                   MIX_PWM_MAX) -> "OK,MIX,<pwm actually used>"
+//   MIX,<0-255>                     mixer speed when no dose is running (0 = off) -> "OK,MIX,<pwm>"
 //   STATUS                          -> "STATUS,<estop 0/1>,<busy 0/1>"
 // Uno -> Pi, unasked
 //   PH,<pH>                         once a second, the calibrated reading (mean of ~50 samples)
@@ -90,11 +89,7 @@ const unsigned long STEP_TICK_HZ = 20000;  // Timer2 interrupt; the step rate ca
 
 // Mixer: runs at MIX_DOSE_PWM while a pump runs and for MIX_AFTER_MS afterwards (the
 // system's 15 s mixing wait), and at the MIX,<pwm> setting the rest of the time.
-// The L298N is fed straight from the 24 V supply (no step-down), but the mixer is a 12 V
-// motor (5840-31ZY worm gear). MIX_PWM_MAX = 128 (50 %, about 11 V average after the
-// L298N's drop) is a hard cap: setMixer() clamps every request to it, whatever asks.
-const uint8_t MIX_PWM_MAX = 128;
-const uint8_t MIX_DOSE_PWM = 90;           // about 7-8 V average at 24 V
+const uint8_t MIX_DOSE_PWM = 180;
 const unsigned long MIX_AFTER_MS = 15000;
 
 struct Pump {
@@ -300,7 +295,6 @@ void warnUncalibrated() {
 void setLight(bool on) { digitalWrite(PIN_LIGHT, on ? HIGH : LOW); }
 
 void setMixer(uint8_t pwm) {
-  if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;  // 12 V motor on a 24 V supply
   if (pwm == mixNow) return;
   mixNow = pwm;
   digitalWrite(PIN_MIX_IN1, pwm ? HIGH : LOW);
@@ -494,7 +488,7 @@ void handleLine(char *line) {
   } else if (!strcmp(head, "MIX") && n > 1) {
     int pwm = atoi(parts[1]);
     if (pwm < 0 || pwm > 255) { Serial.println(F("ERROR,MIX,0-255")); return; }
-    mixManual = estop ? 0 : min(pwm, (int)MIX_PWM_MAX);
+    mixManual = estop ? 0 : pwm;
     Serial.print(F("OK,MIX,")); Serial.println(mixManual);
   } else if (!strcmp(head, "STATUS")) {
     Serial.print(F("STATUS,")); Serial.print(estop ? 1 : 0); Serial.print(',');

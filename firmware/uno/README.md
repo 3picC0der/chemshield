@@ -23,7 +23,7 @@ without the Pi's heartbeat, and the drivers are off (D8 HIGH) whenever no pump r
 | pH board Po | A0 (Abort). V+ to 5V, G to GND; leave To and Do empty |
 | E-stop normally-closed contact | A1 (Hold), other side to GND. The E-stop also cuts the 24 V |
 | Dose light | A2 (Resume), through 220 Ω to 1 kΩ to the LED's long leg; short leg to GND |
-| Mixer, L298N | ENA from D9 (X end-stop signal pin, PWM; ENA jumper removed), IN1 from D10 (Y end-stop signal pin), IN2 to GND; 12V terminal from the 24 V supply (see "The mixer") |
+| Mixer, L298N | ENA from D9 (X end-stop signal pin, PWM; ENA jumper removed), IN1 from D10 (Y end-stop signal pin), IN2 to GND; 12V terminal from the 12 V converter (see "The mixer") |
 
 Never use D0 or D1: they carry the USB serial. D13 is pump 4's DIR now, so the board's "L"
 light just follows that pin; it no longer copies the dose light. With A1 left open the Uno
@@ -76,18 +76,17 @@ Things to know about the shield (Protoneer CNC Shield V3.00, checked against a p
 
 ## The mixer
 
-**Supply.** The L298N's 12V terminal is fed straight from the 24 V supply (after the 3 A
-fuse); there is no step-down. The board bought as a step-down turned out to be a step-up
-(minimum 23.7 V). The L298N's 5V-EN jumper stays on. The mixer is a 12 V motor (5840-31ZY
-worm gear, 400 rpm), so both sketches cap the PWM at `MIX_PWM_MAX` = 128 of 255 (50 %,
-about 11 V average after the L298N's drop of about 2 V). Every mixer request is clamped to
-it, and `OK,MIX,<pwm>` reports the value actually used. If a real 24 V to 12 V step-down
-(LM2596 or XL4015) is fitted later, the cap can go back up to 255.
+**Supply.** The L298N's 12V terminal runs from a ZK-12KX buck-boost converter set to 12.0 V
+(fed from the 24 V after the 3 A fuse), because the mixer is a 12 V motor (5840-31ZY worm
+gear, 400 rpm). The L298N's 5V-EN jumper stays on. Never feed the L298N straight from 24 V:
+with this firmware PWM 255 would put about 22 V on the motor. The first board bought as a
+step-down was a step-up (minimum 23.7 V), so it is not used. A 12 V fan over the two DRV8825s
+shares the converter's output.
 
-The Uno runs the mixer (PWM 90 of 255, `MIX_DOSE_PWM`, about 7-8 V average) while a pump
-runs and for 15 s afterwards (the system's mixing wait), and at the `MIX,<0-255>` setting
-the rest of the time (0 by default). The E-stop and a lost heartbeat switch it off. If 90 is
-too fast or too weak for the stirrer, change `MIX_DOSE_PWM` (at most `MIX_PWM_MAX`).
+The Uno runs the mixer (PWM 180 of 255, `MIX_DOSE_PWM`) while a pump runs and for 15 s
+afterwards (the system's mixing wait), and at the `MIX,<0-255>` setting the rest of the
+time (0 by default). The E-stop and a lost heartbeat switch it off. If 180 is too fast or
+too weak for the stirrer, change `MIX_DOSE_PWM`.
 
 ## Compile and flash
 
@@ -121,7 +120,7 @@ INFO                 settings, E-stop state and any calibration already stored
 STEPS 1 200          pump 1 one turn forwards        STEPS 1 -200   one turn backwards
 SECS 2 10            pump 2 for 10 s at the top speed
 RATE 400             a slower top speed (default 800 full steps/s); ACCEL 800 a gentler ramp
-STOP                 stop now                        MIX 60 / MIX 0    mixer on / off (max 128)
+STOP                 stop now                        MIX 60 / MIX 0    mixer on / off
 ML 1 5               5 mL with the calibration stored by chemshield_uno (to check it)
 ```
 
