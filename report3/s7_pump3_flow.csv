@@ -1,0 +1,4 @@
+trial,run_time_s,volume_ml,flow_ml_per_min,notes
+1,10,51,306,pump 3 (BASE_BULK) distilled water; bench sketch ~288 rpm; graduated cylinder
+2,10,55,330,same setup
+3,10,54,324,same setup
