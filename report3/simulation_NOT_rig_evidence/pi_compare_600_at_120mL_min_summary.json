@@ -1,0 +1,27 @@
+{
+ "rdo": {
+  "recovered": 600,
+  "total_mmol": 17752.3,
+  "mean_all_mmol": 29.59,
+  "mmol_per_success": 29.59,
+  "not_recovered": 0
+ },
+ "pi": {
+  "recovered": 421,
+  "total_mmol": 16891.3,
+  "mean_all_mmol": 28.15,
+  "mmol_per_success": 40.12,
+  "not_recovered": 179
+ },
+ "both_recovered": 421,
+ "both_mean_mmol": {
+  "rdo": 29.86,
+  "pi": 28.94
+ },
+ "planner_vs_pi_on_both_pct": 3.2,
+ "saving_per_success_pct": 26.3,
+ "chem_source": "PLACEHOLDER",
+ "seed": 261,
+ "events": 600,
+ "dose_speed_ml_per_min": 120.0
+}

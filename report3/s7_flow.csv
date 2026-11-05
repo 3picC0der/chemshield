@@ -1,0 +1,4 @@
+trial,pump,channel,run_s,full_steps,commanded_full_steps_per_s,volume_ml,simple_ml_per_min,turns,ml_per_turn,log_utc,method
+1,3,BASE_BULK,10.0,9228.7,1333,51,306.0,46.14,1.105,2026-11-05T17:41:24Z,graduated cylinder read by Belal
+2,3,BASE_BULK,10.0,9228.7,1333,55,330.0,46.14,1.192,2026-11-05T17:43:58Z,graduated cylinder read by Belal
+3,3,BASE_BULK,10.0,9228.2,1333,54,324.0,46.14,1.170,2026-11-05T17:46:12Z,graduated cylinder read by Belal
