@@ -111,6 +111,19 @@ make            # compile
 make upload     # load it onto the Uno on /dev/ttyACM0
 ```
 
+## Bench panel (buttons instead of the Serial Monitor)
+
+With `pump_bench_test` on the Uno and the Uno on this computer's USB (Serial Monitor closed):
+
+```bash
+../chemshield/.venv/bin/python firmware/uno/bench_panel.py      # then open http://127.0.0.1:8090
+```
+
+One card per pump: Check (2 turns), Prime x1 / x3 (10 turns each), Cal 4000 steps, Run steps,
+and a grams box that logs each weighing (full steps per mL, spread) to
+`firmware/uno/bench_logs/<date>.csv`. A big STOP button, mixer on/off and INFO. Runs go one at
+a time; it only listens on this computer.
+
 ## First spin test and pump calibration (pump_bench_test)
 
 Flash `pump_bench_test`, open the Serial Monitor at 115200 baud with "Newline", and switch
