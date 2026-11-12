@@ -16,7 +16,8 @@ STOP at once and drops anything still queued. Steps are FULL steps: 200 = one tu
 
 Calibration: put the cup on the scale and tare, press "Cal 4000 steps", read the grams and
 type them into that pump's box. The page lists every weighing, the full steps per mL of
-each and their spread, and appends them to firmware/uno/bench_logs/<date>.csv. Store the
+each and their spread, and keeps them in firmware/uno/bench_logs/<date>.csv (reloaded on a
+restart). A bad run can be removed from the table; the CSV keeps it, marked "removed". Store the
 mean with chemshield_uno flashed: uno_tool.py pump-cal <pump> <full steps per mL>.
 """
 from __future__ import annotations
@@ -59,7 +60,7 @@ class Bench:
         self.cancel = threading.Event()
         self.ended = threading.Event()                         # DONE / STOPPED / ERROR seen
         self.primes = {p: 0 for p in PUMPS}
-        self.weighings: list[dict] = []
+        self.weighings = self._load_weighings()                # today's, kept across restarts
         threading.Thread(target=self._read, daemon=True).start()
         threading.Thread(target=self._work, daemon=True).start()
         self._log("#", f"opened {port}; the Uno restarts now")
@@ -124,30 +125,57 @@ class Bench:
         self.ser.write(b"MIX 0\n")
         self._log(">", "MIX 0")
 
+    @staticmethod
+    def _csv_path() -> Path:
+        return LOG_DIR / f"{datetime.now():%Y-%m-%d}.csv"
+
+    def _load_weighings(self) -> list[dict]:
+        path = self._csv_path()
+        if not path.exists():
+            return []
+        with path.open(newline="") as f:
+            rows = list(csv.DictReader(f))
+        for r in rows:
+            r["pump"], r["full_steps"] = int(r["pump"]), int(r["full_steps"])
+            r["grams"], r["steps_per_ml"] = float(r["grams"]), float(r["steps_per_ml"])
+            r["status"] = r.get("status") or "kept"
+        return rows
+
+    def _save(self) -> None:
+        """Rewrite today's CSV: every weighing stays in it, removed ones marked as such."""
+        LOG_DIR.mkdir(exist_ok=True)
+        with self._csv_path().open("w", newline="") as f:
+            out = csv.DictWriter(f, fieldnames=["time", "pump", "channel", "full_steps", "grams",
+                                                "steps_per_ml", "status"])
+            out.writeheader()
+            out.writerows(self.weighings)
+
     def weigh(self, pump: int, grams: float) -> None:
         w = {"time": f"{datetime.now():%Y-%m-%d %H:%M:%S}", "pump": pump,
              "channel": PUMPS[pump][0], "full_steps": CAL_STEPS, "grams": grams,
-             "steps_per_ml": round(CAL_STEPS / grams, 2)}
+             "steps_per_ml": round(CAL_STEPS / grams, 2), "status": "kept"}
         self.weighings.append(w)
-        LOG_DIR.mkdir(exist_ok=True)
-        path = LOG_DIR / f"{datetime.now():%Y-%m-%d}.csv"
-        new = not path.exists()
-        with path.open("a", newline="") as f:
-            out = csv.DictWriter(f, fieldnames=list(w))
-            if new:
-                out.writeheader()
-            out.writerow(w)
-        self._log("#", f"weighed pump {pump}: {grams} g -> {w['steps_per_ml']} full steps/mL ({path.name})")
+        self._save()
+        self._log("#", f"weighed pump {pump}: {grams} g -> {w['steps_per_ml']} full steps/mL")
+
+    def remove(self, pump: int, index: int | None) -> None:
+        """Drop one weighing of a pump (index among its kept ones), or all of them (None)."""
+        kept = [w for w in self.weighings if w["pump"] == pump and w["status"] == "kept"]
+        for w in (kept if index is None else kept[index:index + 1]):
+            w["status"] = "removed"
+            self._log("#", f"removed pump {pump} weighing {w['grams']} g ({w['time']})")
+        self._save()
 
     def summary(self) -> dict:
         out = {}
         for p in PUMPS:
-            vals = [w["steps_per_ml"] for w in self.weighings if w["pump"] == p]
+            kept = [w for w in self.weighings if w["pump"] == p and w["status"] == "kept"]
+            vals = [w["steps_per_ml"] for w in kept]
             if vals:
                 mean = statistics.mean(vals)
                 spread = (max(vals) - min(vals)) / mean * 100 if len(vals) > 1 else 0.0
                 out[p] = {"n": len(vals), "mean": round(mean, 2), "spread_pct": round(spread, 2),
-                          "grams": [w["grams"] for w in self.weighings if w["pump"] == p]}
+                          "grams": [w["grams"] for w in kept]}
         return out
 
 
@@ -186,7 +214,7 @@ button{font-size:14px;padding:7px 10px;margin:3px 2px;border-radius:7px;border:1
 input{width:70px;font-size:14px;padding:5px} .busy{color:#b26a00;font-weight:600}
 #log{background:#111;color:#cfc;font:12px/1.4 ui-monospace,monospace;height:260px;overflow:auto;
  padding:8px;border-radius:8px;white-space:pre-wrap} table{border-collapse:collapse;font-size:13px}
-td,th{border:1px solid #ddd;padding:3px 8px;text-align:right}
+td,th{border:1px solid #ddd;padding:3px 8px;text-align:right} a.w{color:#1a5fb4;text-decoration:none;margin-right:6px}
 </style></head><body>
 <h1>Pump bench panel</h1>
 <div class="sub">Uno on <b id="port"></b>, sketch pump_bench_test. Status: <span id="state">idle</span>.
@@ -199,7 +227,7 @@ td,th{border:1px solid #ddd;padding:3px 8px;text-align:right}
   <button onclick="raw('MIX 0')">Off</button></div>
  <div class="card"><h2>Uno</h2><div class="where">settings and stored calibration</div>
   <button onclick="raw('INFO')">INFO</button></div>
- <div class="card" style="width:auto"><h2>Calibration (weighed)</h2><div class="where">full steps per mL = 4000 / grams</div>
+ <div class="card" style="width:auto"><h2>Calibration (weighed)</h2><div class="where">full steps per mL = 4000 / grams &middot; click a weighing to remove it</div>
   <table id="cal"></table></div>
 </div>
 <div id="log"></div>
@@ -219,6 +247,8 @@ document.getElementById('cards').innerHTML=[1,2,3,4].map(card).join('');
 async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});
  const j=await r.json(); if(j.error) alert(j.error); poll();}
 function act(a,p,n){post('/job',{action:a,pump:p,n:n||1})}
+function rm(p,i){const what=i===undefined?`ALL weighings of pump ${p}`:`this weighing of pump ${p}`;
+ if(confirm(`Remove ${what}? (It stays in the CSV, marked removed.)`)) post('/remove',{pump:p,index:i===undefined?null:i});}
 function raw(c){post('/raw',{cmd:c})}
 function weigh(p){const g=+document.getElementById('g'+p).value; if(!(g>0)) return alert('type the grams first');
  post('/weigh',{pump:p,grams:g}); document.getElementById('g'+p).value='';}
@@ -228,7 +258,7 @@ async function poll(){const j=await (await fetch('/state?since='+since)).json();
  document.querySelectorAll('.go').forEach(b=>b.disabled=j.busy);
  for(const p in j.primes) document.getElementById('pc'+p).textContent=j.primes[p];
  let t='<tr><th>pump</th><th>n</th><th>grams</th><th>steps/mL</th><th>spread</th></tr>';
- for(const p in j.cal){const c=j.cal[p]; t+=`<tr><td>${p}</td><td>${c.n}</td><td>${c.grams.join(', ')}</td><td>${c.mean}</td><td>${c.spread_pct}%</td></tr>`}
+ for(const p in j.cal){const c=j.cal[p]; t+=`<tr><td>${p}</td><td>${c.n}</td><td>${c.grams.map((g,i)=>`<a href="#" class="w" title="remove this run" onclick="rm(${p},${i});return false">${g} &times;</a>`).join(' ')}</td><td>${c.mean}</td><td>${c.spread_pct}%</td><td><button onclick="rm(${p})">Clear pump ${p}</button></td></tr>`}
  document.getElementById('cal').innerHTML=t;
  if(j.lines.length){const l=document.getElementById('log'); l.textContent+=j.lines.join('\\n')+'\\n'; l.scrollTop=l.scrollHeight;}
  since=j.next;}
@@ -308,6 +338,16 @@ def make_handler(bench: Bench):
                 except (KeyError, ValueError) as e:
                     return self._json({"error": str(e)}, 400)
                 bench.weigh(pump, grams)
+                return self._json({"ok": True})
+            if self.path == "/remove":
+                try:
+                    pump = int(data["pump"])
+                    index = None if data.get("index") is None else int(data["index"])
+                    if pump not in PUMPS:
+                        raise ValueError("pump 1-4")
+                except (KeyError, ValueError) as e:
+                    return self._json({"error": str(e)}, 400)
+                bench.remove(pump, index)
                 return self._json({"ok": True})
             self._json({"error": "not found"}, 404)
 
