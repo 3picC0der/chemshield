@@ -210,7 +210,8 @@ let since=0;
 function card(p){return `<div class="card"><h2>Pump ${p}: ${P[p][0]}</h2><div class="where">${P[p][1]} &middot; primes this session: <b id="pc${p}">0</b></div>
  <button class="go" onclick="act('check',${p})">Check (2 turns)</button>
  <button class="go" onclick="act('prime',${p},1)">Prime x1</button>
- <button class="go" onclick="act('prime',${p},3)">Prime x3</button><br>
+ <button class="go" onclick="act('prime',${p},3)">Prime x3</button>
+ <button class="go" onclick="act('prime',${p},14)" title="a full prime from dry: 14 x 10 turns, about 2 min">Prime x14</button><br>
  <button class="go" onclick="act('cal',${p})">Cal 4000 steps</button>
  grams <input id="g${p}" type="number" step="0.01"><button onclick="weigh(${p})">Save</button><br>
  <input id="s${p}" type="number" placeholder="steps"><button class="go" onclick="act('steps',${p},+document.getElementById('s${p}').value)">Run steps</button></div>`}
