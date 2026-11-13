@@ -65,9 +65,9 @@ The panel opens in the browser. For each pump: inlet in its reagent bottle, outl
 | 4 | NaOH 0.005 M | left, inner |
 
 ### 1c. Make the tank (start of each session)
-1. **5.000 L** distilled water + **0.420 g NaHCO₃**. Stir until dissolved.
+1. **4.900 L** distilled water + **100 mL** of NaHCO₃ stock (4.2 g in 1.000 L) = 5.000 L with 0.42 g. Stir. It reads about pH 8.2–8.4.
 2. Probe in the tank, mid-depth. Mixer in place.
-3. `bash fpr.sh panel`, then pump 1 → **Dose mL 1.8** (brings it to about pH 7). Fine-tune with 0.5 mL doses on pump 2 (acid) or pump 4 (base) until it reads **6.9–7.1**.
+3. `bash fpr.sh panel`, then pump 1 → **Dose mL 1.8** (from about pH 8.3 to about 7.0). Fine-tune in **0.3 mL** steps: pump 1 (HCl 0.5 M) if above 7.1, pump 3 (NaOH 0.5 M) if below 6.9 (0.3 mL ≈ 0.1 pH here). Stir 1–2 min after each, until **6.9–7.1**. The pH drifts up slowly as CO₂ leaves, so aim for 6.9–7.0 and keep the mixer gentle.
 4. **Ctrl+C**, then start the system (1d).
 
 ### 1d. Start the system
@@ -88,7 +88,7 @@ Other commands: `bash fpr.sh status` · `bash fpr.sh stop` · `bash fpr.sh panel
 **Proves:** INT-S1, INT-S2, INT-S3, C3, S6, S4
 
 1. Say: *"An operator spills acid into the tank."*
-2. Pour **7 mL of 0.5 M HCl** into the tank by hand (syringe).
+2. Pour **7 mL of 0.5 M HCl** into the tank by hand (syringe). It drops the tank to about pH 5.5; use 5 mL (about pH 5.9) to stay clear of the 5.5 limit.
 3. Point at the HMI:
    - Banner turns **red: RECOVERY**. Open **Evidence → Recovery-mode timing** to show the time: **INT-S1** (< 2 s).
    - The **Recovery plan** card shows the planned base doses. Each one is checked by Model A in about 1 ms, shown in the log: **S4**.
