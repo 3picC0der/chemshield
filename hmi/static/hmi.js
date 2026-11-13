@@ -77,6 +77,7 @@ function render(s) {
   renderDoseNow(s);
   renderSafety(s);
   renderCounters(s);
+  renderSecMon(s);
   renderEngineer(s);
   reportShown(s);
   pollAudit(false);
@@ -359,6 +360,43 @@ function renderCounters(s) {
     h += `<span class="chip ${k === "ACCEPT" ? "good" : n ? "bad" : ""}">${GROUP_WORDS[k]}<b>${n}</b></span>`;
   }
   $("counters").innerHTML = h;
+}
+
+// ------------------------------------------------------------------ security monitor (FPR)
+const SEC_CYBER = [["REPLAY", "Replayed"], ["STALE", "Stale"], ["AUTH", "Forged / unsigned"], ["SCHEMA", "Malformed"]];
+const SEC_SAFETY = [["LIMIT", "Over 20 mL"], ["LOCKOUT", "Mixing wait"], ["MODEL_A_BLOCK", "Model A"]];
+let secPrev = null;
+const secHits = [];              // [time ms, group, how many]
+const secHitUntil = {};
+function renderSecMon(s) {
+  const c = s.gateway.counters || {};
+  const now = Date.now();
+  if (secPrev) {
+    for (const [k] of SEC_CYBER.concat(SEC_SAFETY)) {
+      const d = (c[k] || 0) - (secPrev[k] || 0);
+      if (d > 0) { secHits.push([now, k, d]); secHitUntil[k] = now + 6000; }
+    }
+  }
+  secPrev = Object.assign({}, c);
+  while (secHits.length && now - secHits[0][0] > 10000) secHits.shift();
+  const recent = (k) => secHits.filter((h) => h[1] === k).reduce((a, h) => a + h[2], 0);
+  const tile = ([k, lab]) => {
+    const n = c[k] || 0, r = recent(k);
+    return `<div class="tile ${n ? "on" : ""} ${secHitUntil[k] > now ? "hit" : ""}"><div class="tl">${lab}</div>` +
+      `<div class="tn">${n}</div>${r ? `<div class="td">+${r}</div>` : ""}</div>`;
+  };
+  // re-render only when something changed, so a running flash animation is not restarted
+  const cyber = SEC_CYBER.map(tile).join(""), safety = SEC_SAFETY.map(tile).join("");
+  if ($("secmon-cyber").innerHTML !== cyber) $("secmon-cyber").innerHTML = cyber;
+  if ($("secmon-safety").innerHTML !== safety) $("secmon-safety").innerHTML = safety;
+  const cyberRecent = SEC_CYBER.reduce((a, [k]) => a + recent(k), 0);
+  const blocked = SEC_CYBER.reduce((a, [k]) => a + (c[k] || 0), 0);
+  $("secmon").classList.toggle("alert", cyberRecent > 0);
+  $("secmon-title").textContent = cyberRecent > 0 ? `\u26A0 ATTACK DETECTED: ${cyberRecent} commands blocked in the last 10 s`
+    : "SECURITY MONITOR";
+  $("secmon-sub").textContent = cyberRecent > 0 ? "Blocked by the gateway on the Pi. None reached the pumps."
+    : blocked ? `${blocked} attack commands blocked so far. None reached the pumps.`
+    : "Every command passes the gateway on the Pi. Rejected commands never reach the pumps.";
 }
 
 function renderEngineer(s) {
