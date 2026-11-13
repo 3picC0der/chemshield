@@ -18,5 +18,5 @@ if ssh -i "$KEY" -o ConnectTimeout=8 "chemshield@$PI" 'pgrep -f "[h]mi[.]station
   exit 1
 fi
 ( sleep 5; open "http://127.0.0.1:$PORT" ) &
-exec ssh -t -i "$KEY" -L "$PORT:127.0.0.1:$PORT" "chemshield@$PI" \
+exec ssh -t -o ServerAliveInterval=15 -i "$KEY" -L "$PORT:127.0.0.1:$PORT" "chemshield@$PI" \
   "cd ~/chemshield && .venv/bin/python firmware/uno/bench_panel.py --port /dev/ttyACM0 --http $PORT"
