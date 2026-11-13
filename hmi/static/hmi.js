@@ -514,5 +514,10 @@ for (const k of ["replay", "stale", "unsigned", "forged"]) $("t-" + k).onclick =
 
 setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString([], {hour12: false}); }, 500);
 poll();
+// the demo panel remembers whether it was open (per browser)
+try {
+  if (localStorage.getItem("demoOpen") === "1") $("demo").open = true;
+  $("demo").addEventListener("toggle", () => { try { localStorage.setItem("demoOpen", $("demo").open ? "1" : "0"); } catch (e) {} });
+} catch (e) { /* storage blocked: stays closed */ }
 setInterval(poll, 250);
 setInterval(() => pollAudit(false), 1500);

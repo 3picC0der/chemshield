@@ -44,7 +44,7 @@ code{font-family:"Liberation Mono",Menlo,monospace;font-size:.95em}
 .grid{margin-top:14px;display:grid;grid-template-columns:350px minmax(520px,1fr) 320px;gap:12px;align-items:start}
 .col{display:flex;flex-direction:column;gap:12px}
 .card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:14px 16px}
-.card h2{font-size:13px;letter-spacing:1.1px;color:var(--muted);margin-bottom:11px;text-transform:uppercase;
+.card h2,.demo-ev h2{font-size:13px;letter-spacing:1.1px;color:var(--muted);margin-bottom:11px;text-transform:uppercase;
   display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card h3{font-size:13px;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
 .tag{display:inline-block;font-size:12px;padding:3px 8px;border-radius:3px;background:var(--purple-bg);
@@ -149,3 +149,12 @@ select,input[type=number]{font-family:inherit;font-size:16px;padding:9px;border:
 .tile.on .tn{color:var(--red)}
 .tile.hit{animation:tilehit .5s ease-in-out 6 alternate;border-color:var(--red)}
 @keyframes tilehit{from{background:#F7F8FA}to{background:#F8D3D3}}
+
+/* demo panel (FPR): collapsed by default so the screen stays an operator's HMI */
+.demo{background:#fff;border:1px dashed var(--border);border-top:none;margin-bottom:12px}
+.demo>summary{cursor:pointer;padding:7px 18px;font-size:13px;letter-spacing:1.1px;color:var(--muted);
+  text-transform:uppercase;font-weight:bold;list-style:revert}
+.demo[open]>summary{border-bottom:1px dashed var(--border)}
+.demo-body{padding:0 0 12px}
+.demo .secmon{border:none;margin-bottom:0}
+.demo-ev{padding:4px 18px 0}

@@ -30,6 +30,10 @@
   <div class="banner-metrics" id="banner-metrics"></div>
 </section>
 
+
+<details id="demo" class="demo">
+  <summary>Demo panel &middot; evidence for the reviewers</summary>
+  <div class="demo-body">
 <section id="secmon" class="secmon" aria-live="polite">
   <div class="secmon-head">
     <div class="secmon-title" id="secmon-title">SECURITY MONITOR</div>
@@ -44,6 +48,21 @@
     <div class="secmon-tiles" id="secmon-safety"></div>
   </div>
 </section>
+
+<section class="demo-ev">
+    <h2>Evidence for the reviewers
+      <span class="tabs" id="ev-tabs">
+        <span class="tab on" data-tab="timing">Recovery-mode timing</span>
+        <span class="tab" data-tab="hold">10-minute pH hold</span>
+        <span class="tab" data-tab="s4">Model A timing</span>
+      </span>
+    </h2>
+    <div id="ev-timing"></div>
+    <div id="ev-hold" class="hidden"></div>
+    <div id="ev-s4" class="hidden"></div>
+  </section>
+  </div>
+</details>
 
 <main class="grid">
   <!-- ============================== column 1 -->
@@ -78,18 +97,6 @@
       <div id="plan"></div>
     </section>
 
-    <section class="card">
-      <h2>Evidence
-        <span class="tabs" id="ev-tabs">
-          <span class="tab on" data-tab="timing">Recovery-mode timing</span>
-          <span class="tab" data-tab="hold">10-minute pH hold</span>
-          <span class="tab" data-tab="s4">Model A timing</span>
-        </span>
-      </h2>
-      <div id="ev-timing"></div>
-      <div id="ev-hold" class="hidden"></div>
-      <div id="ev-s4" class="hidden"></div>
-    </section>
   </div>
 
   <!-- ============================== column 3 -->
@@ -154,7 +161,7 @@
 </section>
 
 <details class="card engineer" id="engineer">
-  <summary>Engineer and demo panel</summary>
+  <summary>Engineer panel</summary>
   <div class="eng-grid">
     <div id="sim-panel">
       <h3>Simulator (SIM mode only)</h3>
