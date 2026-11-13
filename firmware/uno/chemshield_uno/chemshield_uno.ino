@@ -15,7 +15,8 @@
 //   Pump 4 BASE_FINE  A slot (A4988)    STEP D12, DIR D13 (A-axis jumpers bridged to D12/D13)
 //   Driver enable D8, shared, active LOW: HIGH (off) whenever no pump is running
 //   pH board Po -> A0 [Abort];  V+ -> 5V, G -> GND (leave To and Do empty)
-//   E-stop normally-closed contact: A1 [Hold] -> contact -> GND. The E-stop also cuts the 24 V.
+//   E-stop NO contact (23-24): A1 [Hold] -> contact -> GND (pressed = LOW, ESTOP_IS_NO).
+//   Its NC contact (11-12) cuts the 24 V + between the fuse and the shield.
 //   Dose light: A2 [Resume] -> 220 ohm to 1 kohm -> LED long leg; short leg -> GND
 //   Mixer (L298N): ENA <- D9 [X end-stop signal, PWM], IN1 <- D10 [Y end-stop signal], IN2 -> GND
 //   Never use D0/D1 (USB serial). D13 is pump 4's DIR, so the board's "L" light follows it.
@@ -61,6 +62,7 @@ const uint8_t PIN_ENABLE = 8;              // all four drivers, LOW = on
 const uint8_t PIN_MIX_PWM = 9;             // L298N ENA (Timer1 PWM)
 const uint8_t PIN_MIX_IN1 = 10;            // L298N IN1 (IN2 is tied to GND)
 const bool ESTOP_FITTED = true;            // false = ignore A1 (only if nothing is wired there)
+const bool ESTOP_IS_NO = true;            // true: NO contact (23-24) on A1, pressed = LOW. false: NC contact, pressed = HIGH
 
 const unsigned long BAUD = 115200;
 const unsigned long PH_PERIOD_MS = 1000;   // one PH line a second (the Pi calls the link lost after 2 s)
@@ -359,7 +361,7 @@ float mlFromSteps(uint8_t pump, uint32_t microsteps) {
   return microsteps / (pcal.stepsPerMl[pump] * pumps[pump].microsteps);
 }
 
-bool estopNow() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == HIGH; }
+bool estopNow() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == (ESTOP_IS_NO ? LOW : HIGH); }
 
 // ------------------------------------------------------------------ doses
 void reject(long seq, const __FlashStringHelper *why) {
@@ -585,8 +587,9 @@ void loop() {
   readSerial();
   unsigned long now = millis();
 
-  // E-stop: NC contact to GND, so pressed (or a loose wire) reads HIGH. A running pump
-  // stops on the first HIGH reading; the STATUS line waits for the debounce.
+  // E-stop: NO contact to GND, so pressed reads LOW (a loose signal wire reads released;
+  // the NC contact cutting the 24 V still stops the pumps). A running pump stops on the
+  // first pressed reading; the STATUS line waits for the debounce.
   bool raw = estopNow();
   if (raw && pumping) endPump(F("ESTOP"));
   if (raw != estopRaw) { estopRaw = raw; estopChangedAt = now; }
