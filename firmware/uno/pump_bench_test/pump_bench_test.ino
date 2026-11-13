@@ -3,7 +3,7 @@
 // For the first spin test of each pump and for calibration by weighing. It is NOT the
 // station firmware: no pH, no heartbeat, no gateway. Flash chemshield_uno again afterwards.
 // Same wiring as chemshield_uno (CNC Shield V3): pumps 1-4 = ACID_BULK (X), ACID_FINE (Y),
-// BASE_BULK (Z), BASE_FINE (A); enable D8 (LOW = on); E-stop NC on A1; mixer ENA D9, IN1 D10.
+// BASE_BULK (Z), BASE_FINE (A); enable D8 (LOW = on); E-stop NO contact on A1; mixer ENA D9, IN1 D10.
 //
 // Commands (commas or spaces, any case). Steps are FULL steps: 200 = one turn of the pump.
 //   STEPS <pump 1-4> <n>     run n full steps (negative = backwards, to find the direction)
@@ -35,6 +35,7 @@ const uint8_t PIN_MIX_IN1 = 10;
 // The L298N is fed 12 V from the HW-140 converter: lower this if it ever gets more than 12 V.
 const uint8_t MIX_PWM_MAX = 255;
 const bool ESTOP_FITTED = true;
+const bool ESTOP_IS_NO = true;            // as in chemshield_uno: NO contact on A1, pressed = LOW
 const float START_RATE = 10.0;             // full steps/s at the start and end of a run
 const long MAX_STEPS = 100000;             // 500 turns
 const float MAX_SECS = 120;
@@ -68,7 +69,7 @@ float v = 0;                               // microsteps/s now
 char buf[48];
 uint8_t len = 0;
 
-bool estopPressed() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == HIGH; }
+bool estopPressed() { return ESTOP_FITTED && digitalRead(PIN_ESTOP) == (ESTOP_IS_NO ? LOW : HIGH); }
 
 void mixer(int pwm) {
   if (pwm > MIX_PWM_MAX) pwm = MIX_PWM_MAX;
@@ -93,7 +94,7 @@ void finish(const __FlashStringHelper *word) {
 void start(int8_t p, long fullSteps, float secs) {
   if (running) { Serial.println(F("ERROR,busy: STOP first")); return; }
   if (p < 0 || p > 3) { Serial.println(F("ERROR,pump 1-4")); return; }
-  if (estopPressed()) { Serial.println(F("ERROR,E-stop pressed (or A1 not wired to GND through it)")); return; }
+  if (estopPressed()) { Serial.println(F("ERROR,E-stop pressed")); return; }
   bool back = fullSteps < 0;
   if (back) fullSteps = -fullSteps;
   timed = secs > 0;

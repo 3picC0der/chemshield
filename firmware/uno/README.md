@@ -111,18 +111,32 @@ make            # compile
 make upload     # load it onto the Uno on /dev/ttyACM0
 ```
 
-## Bench panel (buttons instead of the Serial Monitor)
+## Uno panel (buttons instead of the Serial Monitor)
 
-With `pump_bench_test` on the Uno and the Uno on this computer's USB (Serial Monitor closed):
+`bench_panel.py` holds the Uno's port and serves a page on 127.0.0.1:8090. It shows what the
+sketch on the Uno can do:
+
+- **pump_bench_test:** per pump Check (2 turns), Prime x1 / x3 / x14 (10 turns each), Cal 4000
+  steps, Run steps, and a grams box: full steps per mL per weighing, mean and spread, kept in
+  `firmware/uno/bench_logs/<date>.csv`.
+- **chemshield_uno (station):** live pH and volts with a steady indicator and Store buttons for
+  the pH 4 / 7 / 10 buffers (the Uno keeps up to three points); per pump Dose 10 mL, Dose 20 mL,
+  Prime x14 (10 mL each), Dose mL, and a grams box compared with that pump's last dose. Apply
+  stores the corrected full steps per mL (old value / delivered fraction) in the Uno. E-stop
+  state on top. The panel sends the heartbeat itself, so doses are accepted, and the mixer
+  runs during and 15 s after each dose as in the real system.
+
+Always: a big STOP (pump and mixer), one run at a time, removable weighings (the CSV keeps
+them, marked "removed" or "applied"). Only one program can hold the port: stop the station first.
 
 ```bash
-../chemshield/.venv/bin/python firmware/uno/bench_panel.py      # then open http://127.0.0.1:8090
+../chemshield/.venv/bin/python firmware/uno/bench_panel.py      # Uno on the Mac
+bash firmware/uno/panel_on_pi.sh                                # Uno on the Pi: run this on the Mac
+PI=10.42.0.1 bash firmware/uno/panel_on_pi.sh                   # Pi on its own ChemShield-Lab Wi-Fi
 ```
 
-One card per pump: Check (2 turns), Prime x1 / x3 (10 turns each), Cal 4000 steps, Run steps,
-and a grams box that logs each weighing (full steps per mL, spread) to
-`firmware/uno/bench_logs/<date>.csv`. A big STOP button, mixer on/off and INFO. Runs go one at
-a time; it only listens on this computer.
+`panel_on_pi.sh` refuses while the station runs on the Pi, starts the panel there and opens it
+on the Mac through an SSH tunnel (Ctrl+C quits).
 
 ## First spin test and pump calibration (pump_bench_test)
 
