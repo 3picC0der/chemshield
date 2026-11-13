@@ -1,0 +1,6 @@
+time,buffer_ph,volts,spread_mV,note
+2026-11-13 17:53:20,7.00,2.6782,3.3,kept
+2026-11-13 18:09:50,4.00,3.1918,3.7,kept
+2026-11-13 18:23:24,9.00,2.3540,5.6,replaced (probe still settling in base)
+2026-11-13 18:24:21,9.00,2.3483,6.3,replaced (probe still settling in base)
+2026-11-13 18:25:12,9.00,2.3455,5.8,kept
