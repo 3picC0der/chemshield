@@ -45,7 +45,8 @@ PRIME_STEPS, CAL_STEPS, CHECK_STEPS = 2000, 4000, 400       # 10 turns, 20 turns
 RUN_RATE, CHECK_RATE = 800, 200                             # full steps/s: 4 turns/s, 1 turn/s
 PRIME_ML, CHECK_ML, CAL_ML = 10.0, 10.0, 20.0               # station doses (20 mL is its cap)
 PAUSE_S = 5                                                 # between repeated runs
-STEADY_MV = 3.0                                             # pH: 10 s within this = steady
+STEADY_MV = 6.0                                             # pH: 10 s within this = steady (about 0.035 pH;
+                                                            # this probe's noise is 3-5 mV)
 BENCH_RAW = re.compile(r"^(STEPS [1-4] -?\d{1,6}|SECS [1-4] \d{1,3}(\.\d+)?|RATE \d{2,4}"
                        r"|ACCEL \d{2,5}|MIX \d{1,3}|STOP|INFO)$")
 STATION_RAW = re.compile(r"^(MIX,\d{1,3}|STOP|STATUS|V|CAL,SHOW|PCAL,SHOW)$")
@@ -420,6 +421,7 @@ function benchCard(p){return `<div class="card"><h2>Pump ${p}: ${P[p][0]}</h2><d
 function stationCard(p){return `<div class="card"><h2>Pump ${p}: ${P[p][0]}</h2><div class="where">${P[p][1]} &middot; <span id="spm${p}"></span> &middot; primes: <b id="pc${p}">0</b></div>
  <button class="go" onclick="act('check',${p})">Dose 10 mL</button>
  <button class="go" onclick="act('cal',${p})">Dose 20 mL</button>
+ <button class="go" onclick="act('prime',${p},1)">Prime x1 (10 mL)</button>
  <button class="go" onclick="act('prime',${p},14)">Prime x14 (10 mL each)</button><br>
  grams <input id="g${p}" type="number" step="0.01"> from the last dose (<b id="lm${p}">-</b> mL)
  <button onclick="weigh(${p})">Save</button><br>
