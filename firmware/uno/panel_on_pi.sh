@@ -13,7 +13,7 @@ PI="${PI:-172.20.10.2}"
 KEY="${KEY:-$HOME/.ssh/id_ed25519_second}"
 PORT="${PANEL_PORT:-8090}"
 
-if ssh -i "$KEY" -o ConnectTimeout=8 "chemshield@$PI" 'pgrep -f "hmi.station" >/dev/null'; then
+if ssh -i "$KEY" -o ConnectTimeout=8 "chemshield@$PI" 'pgrep -f "[h]mi[.]station" >/dev/null'; then
   echo "The station is running on the Pi and holds the Uno's port. Stop it first, then run this again."
   exit 1
 fi
