@@ -133,7 +133,7 @@ select,input[type=number]{font-family:inherit;font-size:16px;padding:9px;border:
 
 /* security monitor (FPR): one strip under the banner, tiles flash when a count goes up */
 .secmon{display:flex;gap:22px;align-items:stretch;background:#fff;border:1px solid var(--border);border-top:none;
-  padding:10px 18px;margin-bottom:12px}
+  padding:10px 18px}
 .secmon-head{flex:1;min-width:280px;display:flex;flex-direction:column;justify-content:center}
 .secmon-title{font-size:17px;font-weight:bold;letter-spacing:.6px;color:var(--green)}
 .secmon-sub{font-size:13px;color:var(--muted);margin-top:3px}
@@ -156,5 +156,4 @@ select,input[type=number]{font-family:inherit;font-size:16px;padding:9px;border:
   text-transform:uppercase;font-weight:bold;list-style:revert}
 .demo[open]>summary{border-bottom:1px dashed var(--border)}
 .demo-body{padding:0 0 12px}
-.demo .secmon{border:none;margin-bottom:0}
 .demo-ev{padding:4px 18px 0}
