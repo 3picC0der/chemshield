@@ -84,6 +84,8 @@ class Station:
                  clock: Callable[[], float] = time.monotonic, key_source: str = "") -> None:
         self.link = link
         self.secret = secret
+        self.idle_mix = 0                    # mixer speed between doses (0 = off); see _keep_mixing
+        self._mix_sent: tuple[int, float] = (-1, 0.0)
         self.key_source = key_source
         self.clock = clock
         self.dwell_s = float(dwell_s)
@@ -199,6 +201,8 @@ class Station:
             elif alive and not self.link_was_alive:
                 self.audit.event("UNO_LINK_UP", f"{self.link.kind} link is talking", source="Uno")
             self.link_was_alive = alive
+            if alive:
+                self._keep_mixing(now)
             self.gstate.heartbeat_healthy = alive
             self.gateway.lockout_remaining_s()
             if readings:
@@ -434,6 +438,18 @@ class Station:
                          event_id=ev["id"] if ev else "", source="optimiser")
 
     # ---------------------------------------------------------------- doses
+    def _keep_mixing(self, now: float) -> None:
+        """Gentle constant stirring between doses (--idle-mix). The Uno runs the mixer faster
+        during each dose and its 15 s mixing wait by itself, and drops this setting to 0 on an
+        E-stop or a lost heartbeat, so it is sent again every 10 s; HALT stops it."""
+        if not self.idle_mix or not hasattr(self.link, "mix"):
+            return
+        want = 0 if self.mode == "HALT" else self.idle_mix
+        last, at = self._mix_sent
+        if want != last or now - at > 10.0:
+            self.link.mix(want)
+            self._mix_sent = (want, now)
+
     def _submit(self, cmd: dict[str, Any], *, source: str, sender: str) -> dict[str, Any]:
         """Send one signed command through the gateway. Station checks come after the
         gateway's own replay and freshness checks so S3's counts are the gateway's."""

@@ -60,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="seconds the pH must stay inside 6.0-8.5 before an event is closed")
     ap.add_argument("--hand-speed", type=float, default=2.0,
                     help="mL per second of a hand syringe push (sets how long the dose light stays on)")
+    ap.add_argument("--idle-mix", type=int, default=0,
+                    help="mixer speed 0-255 between doses (0 = off; doses still stir at the Uno's dose speed)")
     ap.add_argument("--no-model-a", action="store_true", help="debug only: run without Model A")
     a = ap.parse_args(argv)
 
@@ -67,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
                            auto_pump=not a.no_auto_pump, dwell_s=a.dwell,
                            hand_speed_ml_s=a.hand_speed, use_model_a=not a.no_model_a,
                            dosing=a.dosing)
+    station.idle_mix = max(0, min(255, a.idle_mix))
     print(f"ChemShield station: pH source {station.link.kind}, "
           f"dosing {'pumps' if station.link.pumps else 'by hand' if a.ph_source == 'uno' else 'simulated'}, "
           f"chemistry {station.chem_source}, "
