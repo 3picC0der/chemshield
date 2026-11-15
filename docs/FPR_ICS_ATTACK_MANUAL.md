@@ -173,7 +173,7 @@ ssh -i ~/.ssh/id_ed25519_second chemshield@10.42.0.1 'cd ~/chemshield && .venv/b
   ```
   Wait about 20 s until the green light stops blinking, then unplug. On the hotspot: `PI=172.20.10.2 bash fpr.sh poweroff`.
 
-**Claude on the Mac:** while the Mac is on ChemShield-Lab it has no internet. If you want Claude during the booth, plug your phone into the Mac with USB and turn on Personal Hotspot. The Mac then gets internet over the cable while its Wi-Fi stays on ChemShield-Lab.
+**Claude on the Mac:** while the Mac is on ChemShield-Lab it has no internet. If you want Claude during the booth, plug your phone into the Mac with USB and turn on Personal Hotspot. The Mac then gets internet over the cable while its Wi-Fi stays on ChemShield-Lab. If it still has no internet: System Settings → Network → ⋯ (bottom) → Set Service Order → drag **iPhone USB** above **Wi-Fi**.
 
 ---
 
