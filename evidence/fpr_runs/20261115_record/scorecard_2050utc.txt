@@ -1,0 +1,12 @@
+NORMAL 6.99
+C1 PASS | 4 approved bottles, strongest 1.96 wt% | 
+C2 PASS | 90/90 forged/unsigned/tampered blocked, 0 reached the pumps | this session 90/90
+C3 PASS | max 10.08 mmol · 5/5 runs within 50 | 
+S1 PASS | 600 s logged, pH 6.85-7.14, 0 readings outside | 
+S2 PASS | 3 over-20 mL request(s) rejected; largest dose accepted 10.00 mL; shortest wait between doses 15.0 s; 954 early dose(s) held back by the mixing wait | this session: 0 cap rejections, 15 doses
+S3 PASS | 2060/2060 rejected (100.0 %) | this session 2060/2060
+S4 PASS | 45 doses classified, slowest 2.3 ms, mean 2.0 ms | this session 15 doses, slowest 2.2 ms
+S6 PASS | 5/5 runs; worst 141 s | 
+INT-S1 PASS | 5/5 runs; worst 496 ms | 
+INT-S2 PASS | 5/5 runs; worst 42 s | 
+INT-S3 PASS | 5/5 runs; highest pH after an acid spill 9.49 | 

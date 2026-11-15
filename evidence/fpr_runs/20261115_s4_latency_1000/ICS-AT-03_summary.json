@@ -1,0 +1,35 @@
+{
+  "test": "ICS-AT-03 (S4: incident class and risk score within 3 s)",
+  "device": "Raspberry Pi 5 Model B Rev 1.1",
+  "requests": 1000,
+  "unclassified": 0,
+  "labels": {
+    "ACCEPTABLE_CONTEXT": 529,
+    "HARMFUL_CONTEXT": 277,
+    "UNCERTAIN_CONTEXT": 194
+  },
+  "gateway_decisions": {
+    "ACCEPT": 529,
+    "REJECT": 471
+  },
+  "decision_ms": {
+    "mean": 0.8849,
+    "p50": 1.0793,
+    "p99": 1.3652,
+    "max": 1.6075
+  },
+  "model_a_ms": {
+    "mean": 0.7654,
+    "p99": 1.2185,
+    "max": 1.4679
+  },
+  "limit_ms": 3000.0,
+  "model_version": "A-1.0-ppr",
+  "threshold": 0.20500000000000002,
+  "pass": true,
+  "timeout_check": {
+    "requests": 3,
+    "all_uncertain_and_blocked": true,
+    "max_decision_ms": 100.486
+  }
+}

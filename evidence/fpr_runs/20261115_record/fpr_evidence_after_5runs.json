@@ -1,0 +1,319 @@
+{
+ "since": "2026-11-15T18:09:05.163Z",
+ "runs": [
+  {
+   "key": "20261115-210905-uno/E-0001",
+   "event_id": "E-0001",
+   "source": "PROBE",
+   "direction": "acid",
+   "first_out_utc": "2026-11-15T18:16:14.217Z",
+   "confirmed_utc": "2026-11-15T18:16:16.219Z",
+   "confirm_ph": 5.763,
+   "readings": [
+    5.72,
+    5.75,
+    5.82
+   ],
+   "spill_side_ph": 5.76,
+   "far_side_ph": 6.81,
+   "int_s1_ms": 341.8,
+   "confirm_to_recovery_ms": 0.8,
+   "confirm_to_uno_locked_ms": 4.9,
+   "confirm_to_hmi_shown_ms": 341.8,
+   "int_s1_pass": true,
+   "first_in_band_s": 13.0,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 2.42,
+   "delivered_mmol": 2.42,
+   "c3_pass": true,
+   "recovery_time_s": 13.0,
+   "s6_pass": true,
+   "doses": 1,
+   "dose_list": [
+    "4.84 mL NaOH 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T18:17:29.462Z",
+   "outcome": "recovered",
+   "session": "20261115-210905-uno",
+   "included": true
+  },
+  {
+   "key": "20261115-210905-uno/E-0002",
+   "event_id": "E-0002",
+   "source": "PROBE",
+   "direction": "acid",
+   "first_out_utc": "2026-11-15T18:27:23.740Z",
+   "confirmed_utc": "2026-11-15T18:27:25.742Z",
+   "confirm_ph": 5.57,
+   "readings": [
+    5.89,
+    5.41,
+    5.41
+   ],
+   "spill_side_ph": 5.35,
+   "far_side_ph": 6.79,
+   "int_s1_ms": 447.8,
+   "confirm_to_recovery_ms": 0.6,
+   "confirm_to_uno_locked_ms": 5.7,
+   "confirm_to_hmi_shown_ms": 447.8,
+   "int_s1_pass": true,
+   "first_in_band_s": 20.0,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 3.138,
+   "delivered_mmol": 3.138,
+   "c3_pass": true,
+   "recovery_time_s": 20.0,
+   "s6_pass": true,
+   "doses": 1,
+   "dose_list": [
+    "6.28 mL NaOH 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T18:28:45.887Z",
+   "outcome": "recovered",
+   "session": "20261115-210905-uno",
+   "included": true
+  },
+  {
+   "key": "20261115-210905-uno/E-0003",
+   "event_id": "E-0003",
+   "source": "PROBE",
+   "direction": "acid",
+   "first_out_utc": "2026-11-15T18:54:17.150Z",
+   "confirmed_utc": "2026-11-15T18:54:19.152Z",
+   "confirm_ph": 4.893,
+   "readings": [
+    5.58,
+    4.83,
+    4.27
+   ],
+   "spill_side_ph": 3.69,
+   "far_side_ph": 9.49,
+   "int_s1_ms": 495.8,
+   "confirm_to_recovery_ms": 0.4,
+   "confirm_to_uno_locked_ms": 4.5,
+   "confirm_to_hmi_shown_ms": 495.8,
+   "int_s1_pass": true,
+   "first_in_band_s": 42.1,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 10.082,
+   "delivered_mmol": 10.082,
+   "c3_pass": true,
+   "recovery_time_s": 141.4,
+   "s6_pass": true,
+   "doses": 4,
+   "dose_list": [
+    "9.24 mL NaOH 0.5 M bulk",
+    "4.99 mL NaOH 0.5 M bulk",
+    "3.02 mL HCl 0.5 M bulk",
+    "2.92 mL HCl 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T18:57:40.548Z",
+   "outcome": "recovered",
+   "session": "20261115-210905-uno",
+   "included": true
+  },
+  {
+   "key": "20261115-210905-uno/E-0004",
+   "event_id": "E-0004",
+   "source": "PROBE",
+   "direction": "acid",
+   "first_out_utc": "2026-11-15T19:19:25.386Z",
+   "confirmed_utc": "2026-11-15T19:19:27.388Z",
+   "confirm_ph": 4.687,
+   "readings": [
+    2.25,
+    5.86,
+    5.95
+   ],
+   "spill_side_ph": 4.69,
+   "far_side_ph": 7.6,
+   "int_s1_ms": 295.0,
+   "confirm_to_recovery_ms": 0.5,
+   "confirm_to_uno_locked_ms": 5.7,
+   "confirm_to_hmi_shown_ms": 295.0,
+   "int_s1_pass": true,
+   "first_in_band_s": 2.0,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 1.272,
+   "delivered_mmol": 1.272,
+   "c3_pass": true,
+   "recovery_time_s": 2.0,
+   "s6_pass": true,
+   "doses": 1,
+   "dose_list": [
+    "2.54 mL NaOH 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T19:20:31.565Z",
+   "outcome": "recovered",
+   "session": "20261115-210905-uno",
+   "included": false,
+   "excluded_why": "False spill"
+  },
+  {
+   "key": "20261115-210905-uno/E-0005",
+   "event_id": "E-0005",
+   "source": "PROBE",
+   "direction": "base",
+   "first_out_utc": "2026-11-15T19:25:09.084Z",
+   "confirmed_utc": "2026-11-15T19:25:11.185Z",
+   "confirm_ph": 8.51,
+   "readings": [
+    8.51,
+    8.51,
+    8.51
+   ],
+   "spill_side_ph": 8.57,
+   "far_side_ph": 8.38,
+   "int_s1_ms": 10242.6,
+   "confirm_to_recovery_ms": 0.5,
+   "confirm_to_uno_locked_ms": 5.7,
+   "confirm_to_hmi_shown_ms": 10242.6,
+   "int_s1_pass": false,
+   "first_in_band_s": 1.0,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 0.25,
+   "delivered_mmol": 0.25,
+   "c3_pass": true,
+   "recovery_time_s": 167.3,
+   "s6_pass": true,
+   "doses": 1,
+   "dose_list": [
+    "0.50 mL HCl 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T19:28:58.589Z",
+   "outcome": "recovered",
+   "session": "20261115-210905-uno",
+   "included": false,
+   "excluded_why": "Not a spill: pH drifted to 8.5 after manual buffer/base top-up; HMI tab was in the background (10 s display)"
+  },
+  {
+   "key": "20261115-223936-uno/E-0001",
+   "event_id": "E-0001",
+   "source": "PROBE",
+   "direction": "acid",
+   "first_out_utc": "2026-11-15T19:45:07.521Z",
+   "confirmed_utc": "2026-11-15T19:45:09.523Z",
+   "confirm_ph": 4.643,
+   "readings": [
+    4.97,
+    4.51,
+    4.45
+   ],
+   "spill_side_ph": 4.57,
+   "far_side_ph": 7.31,
+   "int_s1_ms": 339.5,
+   "confirm_to_recovery_ms": 0.6,
+   "confirm_to_uno_locked_ms": 7.6,
+   "confirm_to_hmi_shown_ms": 339.5,
+   "int_s1_pass": true,
+   "first_in_band_s": 31.0,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 4.886,
+   "delivered_mmol": 4.886,
+   "c3_pass": true,
+   "recovery_time_s": 31.0,
+   "s6_pass": true,
+   "doses": 2,
+   "dose_list": [
+    "6.43 mL NaOH 0.5 M bulk",
+    "3.34 mL NaOH 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T19:46:40.703Z",
+   "outcome": "recovered",
+   "session": "20261115-223936-uno",
+   "included": true
+  },
+  {
+   "key": "20261115-230411-uno/E-0001",
+   "event_id": "E-0001",
+   "source": "PROBE",
+   "direction": "acid",
+   "first_out_utc": "2026-11-15T20:07:16.970Z",
+   "confirmed_utc": "2026-11-15T20:07:18.972Z",
+   "confirm_ph": 5.937,
+   "readings": [
+    5.9,
+    5.94,
+    5.97
+   ],
+   "spill_side_ph": 5.84,
+   "far_side_ph": 6.89,
+   "int_s1_ms": 6.8,
+   "confirm_to_recovery_ms": 0.7,
+   "confirm_to_uno_locked_ms": 6.8,
+   "confirm_to_hmi_shown_ms": null,
+   "int_s1_pass": true,
+   "first_in_band_s": 7.0,
+   "int_s2_pass": true,
+   "int_s3_pass": true,
+   "reagent_mmol": 3.856,
+   "delivered_mmol": 3.856,
+   "c3_pass": true,
+   "recovery_time_s": 34.1,
+   "s6_pass": true,
+   "doses": 2,
+   "dose_list": [
+    "4.32 mL NaOH 0.5 M bulk",
+    "3.40 mL NaOH 0.5 M bulk"
+   ],
+   "closed_utc": "2026-11-15T20:08:53.254Z",
+   "outcome": "recovered",
+   "session": "20261115-230411-uno",
+   "included": true
+  }
+ ],
+ "holds": [],
+ "all": {
+  "attacks": {
+   "replay": {
+    "sent": 0,
+    "blocked": 0,
+    "reached": 0
+   },
+   "stale": {
+    "sent": 0,
+    "blocked": 0,
+    "reached": 0
+   },
+   "forged": {
+    "sent": 0,
+    "blocked": 0,
+    "reached": 0
+   },
+   "unsigned": {
+    "sent": 0,
+    "blocked": 0,
+    "reached": 0
+   },
+   "tampered": {
+    "sent": 0,
+    "blocked": 0,
+    "reached": 0
+   }
+  },
+  "model_a": {
+   "n": 32,
+   "max_ms": 2.2907,
+   "sum_ms": 64.3333,
+   "over_3s": 0,
+   "acceptable": 28,
+   "harmful": 4
+  },
+  "s2": {
+   "limit_rejects": 3,
+   "max_rejected_ml": 25.0,
+   "lockout_rejects": 1,
+   "accepted": 28,
+   "max_accepted_ml": 10.0,
+   "min_gap_s": 18.37,
+   "gaps": 24,
+   "gaps_under_15s": 0
+  }
+ }
+}

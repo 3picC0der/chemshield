@@ -1,0 +1,7 @@
+
+=== replay-now: 1000 commands in 92.1 s ===
+  REUSED_NONCE            1000   (REPLAY)
+  rejected as REPLAY: 1000   as STALE: 0   accepted: 0
+  forwarded to the Uno: 0
+  HMI counters, change during this run: REPLAY +1000, STALE +0, ACCEPT +6, TOTAL +2000
+  replayed/stale rejected: 1000/1000 = 100.00%  (S3 needs >= 99%)

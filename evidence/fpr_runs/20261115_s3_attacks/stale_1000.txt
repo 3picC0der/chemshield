@@ -1,0 +1,7 @@
+
+=== stale: 1000 commands in 58.4 s ===
+  STALE_TIMESTAMP         1000   (STALE)
+  rejected as REPLAY: 0   as STALE: 1000   accepted: 0
+  forwarded to the Uno: 0
+  HMI counters, change during this run: REPLAY +0, STALE +1000, ACCEPT +0, TOTAL +1000
+  replayed/stale rejected: 1000/1000 = 100.00%  (S3 needs >= 99%)
