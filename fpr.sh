@@ -9,6 +9,7 @@
 #
 # The Pi is 10.42.0.1 on its own Wi-Fi (ChemShield-Lab), the booth setup. When it is on the
 # phone hotspot instead:   PI=172.20.10.2 bash fpr.sh start
+# Mixer speed between doses (default 100):  IDLE_MIX=150 bash fpr.sh start
 set -euo pipefail
 cd "$(dirname "$0")"
 PI="${PI:-10.42.0.1}"
@@ -28,7 +29,7 @@ case "${1:-}" in
       "${SSH[@]}" 'cd ~/chemshield && sudo bash gateway/firewall/c2_network.sh fw >/dev/null && echo "  firewall: on"'
     fi
     echo "Starting the station on the Pi..."
-    "${SSH[@]}" '(cd ~/chemshield && exec setsid .venv/bin/python -W ignore -m hmi.station --ph-source uno --idle-mix ${IDLE_MIX:-100}) > ~/station.log 2>&1 < /dev/null & sleep 9; head -2 ~/station.log'
+    "${SSH[@]}" "(cd ~/chemshield && exec setsid .venv/bin/python -W ignore -m hmi.station --ph-source uno --idle-mix ${IDLE_MIX:-100}) > ~/station.log 2>&1 < /dev/null & sleep 9; head -2 ~/station.log"
     echo "Setting the Pi's clock from this Mac..."
     $PY -m hmi.clock_sync --pi "chemshield@$PI" --station "http://$PI:8000" \
       --ssh-option="-i$KEY" --ssh-option=-oIdentitiesOnly=yes --ssh-option=-oBatchMode=yes
