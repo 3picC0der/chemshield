@@ -1,0 +1,16 @@
+{
+ "chem_source": "PLACEHOLDER",
+ "events": 600,
+ "pi_success": 417,
+ "solver_success": 600,
+ "paired": 417,
+ "pi_mean_mmol": 28.913397231737363,
+ "solver_mean_mmol": 29.83806504248138,
+ "saving_total_pct": -3.1980600665252767,
+ "saving_median_pct": -3.5825395188560094,
+ "solver_less_pct_of_events": 15.107913669064748,
+ "pi_far_ok": 100.0,
+ "solver_far_ok": 100.0,
+ "pi_mean_t": 230.58420053444385,
+ "solver_mean_t": 97.26810087733395
+}
