@@ -14,7 +14,8 @@ const GROUP_WORDS = {REPLAY: "Replayed", STALE: "Stale", LIMIT: "Over limit", LO
 
 let S = null;               // last state
 let logOnly = "all";
-let evTab = "timing";
+let evTab = "specs";
+const EV_TABS = ["specs", "runs", "timing", "hold", "s2", "attacks", "s4", "c1"];
 const shownEvents = new Set();
 let simFilled = false;
 let lastAuditKey = "";
@@ -257,28 +258,97 @@ function renderPlan(s) {
   $("plan").innerHTML = h;
 }
 
+// ------------------------------------------------------------------ demo panel: evidence for the reviewers
+const ST_WORDS = {PASS: "PASS", FAIL: "FAIL", NOT_RUN: "not run", RUNNING: "running", PARTIAL: "partly shown", BOOTH: "at the booth"};
+const st = (x) => `<span class="st st-${esc(x)}">${esc(ST_WORDS[x] || x)}</span>`;
+const pf = (b) => b === null || b === undefined ? "" : b ? ` <span class="pass">✓</span>` : ` <span class="fail">✗</span>`;
+const dt = (iso) => { if (!iso) return "—"; const t = new Date(iso); return t.toLocaleString([], {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false}); };
+function setHTML(id, h) { const el = $(id); if (el && el.__h !== h) { el.innerHTML = h; el.__h = h; } }
+const chip = (lab, val, cls) => `<span class="chip ${cls || ""}">${lab}<b>${val}</b></span>`;
+let s2Reply = "";
+
 function renderEvidence(s) {
-  // --- INT-S1 timing
+  const E = s.evidence;
+  if (!E) return;
+  $("ev-since").textContent = `· record since ${dt(E.since)} · kept across restarts`;
+  renderSpecs(s, E);
+  renderRuns(s, E);
+  renderTiming(s);
+  renderHold(s, E);
+  renderS2(s, E);
+  renderAttacks(s, E);
+  renderS4(s, E);
+  renderC1(E);
+}
+
+function renderSpecs(s, E) {
+  const rows = E.scorecard || [];
+  const n = (k) => rows.filter((r) => r.status === k).length;
+  let h = `<div class="ev-sum">${chip("PASS", n("PASS"), "good")}${n("FAIL") ? chip("FAIL", n("FAIL"), "bad") : ""}${chip("not run yet", n("NOT_RUN") + n("RUNNING") + n("PARTIAL"))}${chip("shown at the booth", 3)}</div>`;
+  h += `<table class="ev-tbl"><thead><tr><th style="width:70px">Item</th><th>Requirement</th><th>Result on this rig</th><th style="width:96px">Status</th><th style="width:30%">How it is shown</th></tr></thead><tbody>`;
+  for (const r of rows) {
+    h += `<tr><td class="it">${esc(r.item)}</td><td>${esc(r.title)}<span class="sub">${esc(r.requirement)}</span></td>
+      <td>${esc(r.result)}${r.session ? `<span class="sub">${esc(r.session)}</span>` : ""}</td><td>${st(r.status)}</td><td class="note" style="margin:0">${esc(r.how)}</td></tr>`;
+  }
+  h += `<tr><td class="it">S5</td><td>Usability<span class="sub">SUS ≥ 80</span></td><td>SUS forms and score chart</td><td>${st("BOOTH")}</td><td class="note">Reviewers can try the HMI themselves.</td></tr>
+    <tr><td class="it">S7</td><td>Pump flow rating<span class="sub">rated max ≤ 500 mL/min</span></td><td>Kamoer KPHM400, 400 mL/min rated</td><td>${st("BOOTH")}</td><td class="note">Pump label and datasheet.</td></tr>
+    <tr><td class="it">S9</td><td>Reagent vs a PI controller<span class="sub">≥ 15 % less</span></td><td>—</td><td>${st("BOOTH")}</td><td class="note">Not an HMI test.</td></tr>`;
+  h += `</tbody></table><div class="note">Results count every run since the record started, through station restarts; "this session" is since the station last started.
+    <a class="linkbtn" href="/api/export/spec_scorecard.csv">Download the scorecard (CSV)</a> <a class="linkbtn" href="/api/export/recovery_runs.csv">Download all recovery runs (CSV)</a></div>`;
+  setHTML("ev-specs", h);
+}
+
+function runCells(r, live) {
+  const ms = r.int_s1_ms === null || r.int_s1_ms === undefined ? "—" : `${num(r.int_s1_ms, 0)} ms`;
+  const fib = r.first_in_band_s === null || r.first_in_band_s === undefined ? (live ? "not yet" : "never") : `${num(r.first_in_band_s, 0)} s`;
+  const rec = r.recovery_time_s === null || r.recovery_time_s === undefined ? (live ? `${num(r.elapsed_s, 0)} s so far` : esc(r.outcome)) : `${num(r.recovery_time_s, 0)} s`;
+  const side = r.direction === "acid" ? "highest" : "lowest";
+  return `<td>${esc(r.direction === "acid" ? "acid" : "base")} spill<span class="sub">confirmed at pH ${num(r.confirm_ph, 2)}; ${r.direction === "acid" ? "lowest" : "highest"} ${num(r.spill_side_ph, 2)}</span></td>
+    <td>${ms}${live && r.confirm_to_hmi_shown_ms == null ? "" : pf(r.int_s1_pass)}<span class="sub">Pi ${num(r.confirm_to_recovery_ms, 1)} · Uno ${num(r.confirm_to_uno_locked_ms, 0)} · HMI ${num(r.confirm_to_hmi_shown_ms, 0)}</span></td>
+    <td>${fib}${live && r.first_in_band_s == null ? "" : pf(r.int_s2_pass)}</td>
+    <td>${num(r.far_side_ph, 2)}${pf(r.int_s3_pass)}<span class="sub">${side} pH after the spill</span></td>
+    <td>${num(r.reagent_mmol, 2)} mmol${pf(r.c3_pass)}<span class="sub">${r.doses} dose${r.doses === 1 ? "" : "s"}</span></td>
+    <td>${rec}${live ? "" : pf(r.s6_pass)}</td>`;
+}
+
+function renderRuns(s, E) {
+  const runs = E.runs || [], counted = runs.filter((r) => r.included !== false);
+  const n = counted.length, ok = (k) => counted.filter((r) => r[k]).length;
+  const frac = (k) => n ? `${ok(k)}/${n}` : "—";
+  const c3max = n ? Math.max(...counted.map((r) => Number(r.reagent_mmol) || 0)) : null;
+  let h = `<div class="note" style="margin-top:0">One row per unsafe event on the real tank. INT-S1: recovery mode within 2 s. INT-S2: back inside 6.0–8.5 within 300 s. INT-S3: the far side (pH after an acid spill must stay ≤ 9.5, after a base spill ≥ 5.5), needed in ≥ 90 % of runs. C3: ≤ 50 mmol. S6: recovered (back in band and held ${num(s.event ? s.event.dwell_s : 60, 0)} s) within 300 s in ≥ 95 % of runs. pH values are the mean of 3 readings, as on the main screen.</div>`;
+  h += `<div class="ev-sum">${chip("Runs counted", n)}${chip("INT-S1", frac("int_s1_pass"), n && ok("int_s1_pass") === n ? "good" : "")}${chip("INT-S2", frac("int_s2_pass"), n && ok("int_s2_pass") === n ? "good" : "")}${chip("INT-S3", frac("int_s3_pass"), n && ok("int_s3_pass") / n >= 0.9 ? "good" : "")}${chip("C3 max", c3max === null ? "—" : num(c3max, 2) + " mmol", c3max !== null && c3max <= 50 ? "good" : "")}${chip("S6", frac("s6_pass"), n && ok("s6_pass") / n >= 0.95 ? "good" : "")}</div>`;
+  h += `<table class="ev-tbl"><thead><tr><th>Run</th><th>Spill</th><th>INT-S1 recovery mode</th><th>INT-S2 back in band</th><th>INT-S3 far side</th><th>C3 reagent</th><th>S6 recovered in</th><th style="width:70px"></th></tr></thead><tbody>`;
+  if (E.live) h += `<tr class="live"><td><b>${esc(E.live.event_id)}</b><span class="sub">in progress · ${hms(E.live.confirmed_utc)}</span></td>${runCells(E.live, true)}<td></td></tr>`;
+  if (!runs.length && !E.live) h += `<tr><td colspan="8" class="wait">No recovery runs yet. Spill acid into the tank: the run appears here when the event closes.</td></tr>`;
+  for (const r of runs) {
+    const out = r.included === false;
+    h += `<tr class="${out ? "out" : ""}"><td>${esc(r.event_id)}<span class="sub">${dt(r.confirmed_utc)}${out ? " · left out: " + esc(r.excluded_why || "") : ""}</span></td>${runCells(r, false)}
+      <td class="keep"><button class="xbtn" data-act="${out ? "run-in" : "run-out"}" data-key="${esc(r.key)}">${out ? "count it" : "leave out"}</button></td></tr>`;
+  }
+  h += `</tbody></table><div class="note">"Leave out" keeps the run in the table and the CSV but not in the statistics (a rehearsal, a spill made wrong); the reason goes in the audit log.
+    <a class="linkbtn" href="/api/export/recovery_runs.csv">Download all recovery runs (CSV)</a></div>`;
+  setHTML("ev-runs", h);
+}
+
+function renderTiming(s) {
   const rows = s.timing || [];
-  let h = `<div class="note" style="margin-top:0">INT-S1: the system must enter safe-recovery mode within 2 s of confirming an unsafe event. Each time is measured on the Pi's clock from the moment the event was confirmed. "HMI showed it" is when this screen actually drew the red banner, so keep the HMI in front: browsers slow down tabs that are hidden.</div>`;
+  let h = `<div class="note" style="margin-top:0">INT-S1: the system must enter safe-recovery mode within 2 s of confirming an unsafe event. Each time is measured on the Pi's clock from the moment the event was confirmed. "HMI showed it" is when this screen actually drew the red banner, so keep the HMI in front: browsers slow down tabs that are hidden. (This session's events; every run is in Recovery runs.)</div>`;
   h += `<table style="margin-top:8px"><thead><tr><th>Event</th><th>Confirmed</th><th>Recovery mode</th><th>Uno locked</th><th>HMI showed it</th><th>Result</th></tr></thead><tbody>`;
-  if (!rows.length) h += `<tr><td colspan="6" class="wait">No event yet.</td></tr>`;
+  if (!rows.length) h += `<tr><td colspan="6" class="wait">No event yet in this session.</td></tr>`;
   for (const r of rows) {
     const ms = (x) => x === null || x === undefined ? "—" : `${num(x, 0)} ms`;
     const res = r.confirm_to_hmi_shown_ms === null ? `<span class="wait">measuring</span>` : r.pass_2s ? `<span class="pass">PASS</span>` : `<span class="fail">FAIL</span>`;
     h += `<tr><td>${esc(r.event_id)} <span class="tag ${r.source === "SIM" ? "tag-sim" : "tag-probe"}">${r.source}</span></td><td>${hmsms(r.confirmed_utc)}</td><td>+${ms(r.confirm_to_recovery_ms)}</td><td>+${ms(r.confirm_to_uno_locked_ms)}</td><td>+${ms(r.confirm_to_hmi_shown_ms)}</td><td>${res}</td></tr>`;
   }
   h += `</tbody></table><div class="note"><a class="linkbtn" href="/api/export/int_s1_timing.csv">Download timing CSV</a></div>`;
-  $("ev-timing").innerHTML = h;
+  setHTML("ev-timing", h);
+}
 
-  // --- S1 hold
+function renderHold(s, E) {
   const hd = s.hold;
   let g = `<div class="note" style="margin-top:0">S1 (CHE-AT-04): start the log, follow any dose the HMI asks for, and the pH must stay inside 6.5–7.5 for 10 minutes.</div>`;
-  if (!hd || !hd.active) {
-    g += `<div class="row"><button class="btn2" id="btn-hold-start">Start the 10-minute log</button></div>`;
-  } else {
-    g += `<div class="row"><button class="btn2" id="btn-hold-stop">Stop the log</button></div>`;
-  }
+  g += `<div class="row">${!hd || !hd.active ? `<button class="btn2" data-act="hold-start">Start the 10-minute log</button>` : `<button class="btn2" data-act="hold-stop">Stop the log</button>`}</div>`;
   if (hd) {
     const pct = Math.min(100, (hd.elapsed_s / 600) * 100);
     g += `<div class="two"><div>${kv("Elapsed", `${num(hd.elapsed_s, 0)} s / 600 s`)}${kv("Lowest pH", num(hd.min, 2))}${kv("Highest pH", num(hd.max, 2))}</div>
@@ -287,18 +357,66 @@ function renderEvidence(s) {
           <div class="bararea"><div class="barfill" style="width:${pct}%"></div></div>`;
     if (hd.suggestion) {
       g += `<div class="reply info"><b>The HMI asks for a dose:</b> ${esc(hd.suggestion.text)}.
-            <button class="btn2" id="btn-use-sugg" style="margin-left:6px">Put it in the dose form</button></div>`;
+            <button class="btn2" data-act="use-sugg" style="margin-left:6px">Put it in the dose form</button></div>`;
     }
     g += `<div class="note"><a class="linkbtn" href="/api/export/s1_hold.csv">Download the pH log (CSV)</a></div>`;
   }
-  $("ev-hold").innerHTML = g;
-  const bs = $("btn-hold-start"); if (bs) bs.onclick = () => act("HOLD_START");
-  const bt = $("btn-hold-stop"); if (bt) bt.onclick = () => act("HOLD_STOP");
-  const bu = $("btn-use-sugg"); if (bu) bu.onclick = () => { $("dose-ch").value = hd.suggestion.channel_id; $("dose-ml").value = hd.suggestion.ml; $("dose-ml").focus(); };
+  const holds = E.holds || [];
+  if (holds.length) {
+    g += `<table class="ev-tbl" style="margin-top:10px"><thead><tr><th>Hold logs recorded</th><th>Logged</th><th>pH range</th><th>Outside 6.5–7.5</th><th>Result</th></tr></thead><tbody>`;
+    for (const x of holds) g += `<tr><td>${dt(x.started_utc)}</td><td>${num(x.elapsed_s, 0)} s</td><td>${num(x.min, 2)} – ${num(x.max, 2)}</td><td>${x.outside}</td><td>${x.pass ? `<span class="pass">PASS</span>` : `<span class="fail">not a pass</span>`}</td></tr>`;
+    g += `</tbody></table>`;
+  }
+  setHTML("ev-hold", g);
+}
 
-  // --- S4: Model A timing
+function renderS2(s, E) {
+  const a = E.s2.all, se = E.s2.session;
+  const lock = s.gateway.lockout_s || 0, canLock = lock >= 2 && !s.pending;
+  let h = `<div class="note" style="margin-top:0">S2: no single dose over 20 mL, and at least 15 s of mixing after a dose before the next one. The gateway enforces both; the gap below is measured from when the last dose went into the tank to when the next one was accepted.</div>`;
+  h += `<table class="ev-tbl" style="margin-top:8px"><thead><tr><th></th><th>All recorded</th><th>This session</th><th>Limit</th><th>Result</th></tr></thead><tbody>
+    <tr><td>Requests over 20 mL rejected</td><td>${a.limit_rejects}${a.max_rejected_ml != null ? ` (up to ${num(a.max_rejected_ml, 1)} mL)` : ""}</td><td>${se.limit_rejects}</td><td>every one</td><td>${a.limit_rejects ? `<span class="pass">PASS</span>` : `<span class="wait">not tried yet</span>`}</td></tr>
+    <tr><td>Largest dose accepted</td><td>${a.max_accepted_ml == null ? "—" : num(a.max_accepted_ml, 2) + " mL"} (${a.accepted} doses)</td><td>${se.max_accepted_ml == null ? "—" : num(se.max_accepted_ml, 2) + " mL"} (${se.accepted})</td><td>≤ 20 mL</td><td>${a.max_accepted_ml == null ? `<span class="wait">no dose yet</span>` : a.max_accepted_ml <= 20 ? `<span class="pass">PASS</span>` : `<span class="fail">FAIL</span>`}</td></tr>
+    <tr><td>Shortest wait between doses</td><td>${a.min_gap_s == null ? "—" : num(a.min_gap_s, 1) + " s"} (${a.gaps} gaps)</td><td>${se.min_gap_s == null ? "—" : num(se.min_gap_s, 1) + " s"}</td><td>≥ 15 s</td><td>${a.min_gap_s == null ? `<span class="wait">needs 2 doses</span>` : a.gaps_under_15s === 0 ? `<span class="pass">PASS</span>` : `<span class="fail">FAIL</span>`}</td></tr>
+    <tr><td>Early doses held back by the mixing wait</td><td>${a.lockout_rejects}</td><td>${se.lockout_rejects}</td><td></td><td></td></tr>
+    </tbody></table>`;
+  h += `<div class="row" style="margin-top:10px"><button class="btn2" data-act="s2-cap">Request 25 mL (must be rejected)</button>
+    <button class="btn2" data-act="s2-lock" ${canLock ? "" : "disabled"}>Try a dose during the mixing wait${canLock ? ` (${num(lock, 0)} s left)` : ""}</button></div>
+    <div class="note">${canLock ? "Sends 1 mL of NaOH 0.005 M now; the gateway must refuse it." : "The mixing-wait test is available for 15 s after each dose goes in (the recovery doses are a good moment)."} Nothing is pumped when a request is refused.</div>`;
+  if (s2Reply) h += s2Reply;
+  const ds = (s.decisions || []).filter((d) => ["LIMIT", "LOCKOUT", "ACCEPT"].includes(d.group) && !/attack|security test/i.test(d.sender || ""));
+  if (ds.length) {
+    h += `<table class="ev-tbl" style="margin-top:10px"><thead><tr><th>Received</th><th>Dose</th><th>From</th><th>Since the last dose</th><th>Gateway</th></tr></thead><tbody>`;
+    for (const d of ds) h += `<tr><td>${hmsms(d.received_utc)}</td><td>${num(d.volume_ml, 2)} mL ${esc(CH_WORDS[d.channel_id] || d.channel_id)}</td><td>${esc(d.sender)}</td><td>${d.since_last_dose_s == null ? "—" : num(d.since_last_dose_s, 1) + " s"}</td><td class="${d.decision === "ACCEPT" ? "done" : "bad"}">${esc(d.decision === "ACCEPT" ? "ACCEPTED" : (GROUP_WORDS[d.group] || d.group))}</td></tr>`;
+    h += `</tbody></table>`;
+  }
+  setHTML("ev-s2", h);
+}
+
+function renderAttacks(s, E) {
+  const A = E.attacks.all, B = E.attacks.session;
+  const KIND = [["replay", "Replayed (exact copy of a real command)", "S3"], ["stale", "Stale (real command, sent 5 s late)", "S3"],
+    ["forged", "Forged (signed with a wrong key)", "C2"], ["unsigned", "Unsigned", "C2"], ["tampered", "Tampered (1 mL changed to 20 mL)", "C2"]];
+  const sum = (T, ks, f) => ks.reduce((x, k) => x + T[k][f], 0);
+  const s3s = sum(A, ["replay", "stale"], "sent"), s3b = sum(A, ["replay", "stale"], "blocked");
+  const c2s = sum(A, ["forged", "unsigned", "tampered"], "sent"), c2b = sum(A, ["forged", "unsigned", "tampered"], "blocked");
+  const reached = sum(A, Object.keys(A), "reached");
+  let h = `<div class="note" style="margin-top:0">Every attack command goes over the network to the gateway on the Pi, like an intruder's would. S3: at least 99 % of replayed and stale commands rejected. C2: nothing without the operator's signature reaches the pumps. Run <code>bash fpr.sh attack</code> in Terminal and watch the Security monitor; the 2,000-command runs (<code>hmi.attack_station</code>) add to the same counts.</div>`;
+  h += `<div class="ev-sum">${chip("S3 rejected", s3s ? `${s3b}/${s3s} (${num(100 * s3b / s3s, 1)} %)` : "—", s3s && s3b / s3s >= 0.99 ? "good" : "")}${chip("C2 blocked", c2s ? `${c2b}/${c2s}` : "—", c2s && c2b === c2s ? "good" : "")}${chip("Reached the pumps", reached, reached ? "bad" : "good")}</div>`;
+  h += `<table class="ev-tbl"><thead><tr><th>Attack</th><th>Spec</th><th>Sent</th><th>Blocked</th><th>Reached the pumps</th><th>This session</th></tr></thead><tbody>`;
+  for (const [k, lab, spec] of KIND) {
+    const r = A[k], q = B[k];
+    h += `<tr><td>${lab}</td><td>${spec}</td><td>${r.sent}</td><td>${r.blocked}${r.sent ? pf(r.blocked === r.sent) : ""}</td><td>${r.reached}</td><td>${q.blocked}/${q.sent}</td></tr>`;
+  }
+  h += `</tbody></table><div class="note">Counted from the gateway's own decisions; the attack tools tag their commands so real operator doses are never counted here. Every rejected command is in the audit log with its reason.</div>`;
+  setHTML("ev-attacks", h);
+}
+
+function renderS4(s, E) {
+  const m = E.model_a.all, ms = E.model_a.session;
   const ds = (s.decisions || []).filter((d) => d.model_a_label && d.model_a_label !== "NOT_CALLED");
-  let k = `<div class="note" style="margin-top:0">S4: every dose request that reaches Model A gets a class and a risk score. Times are for this request, on the Pi.</div>`;
+  let k = `<div class="note" style="margin-top:0">S4: every dose request that reaches Model A gets a class and a risk score within 3 s. Times are measured on the Pi for each request.</div>`;
+  k += `<div class="ev-sum">${chip("Doses classified", m.n)}${chip("Slowest", m.n ? num(m.max_ms, 1) + " ms" : "—", m.n && m.over_3s === 0 ? "good" : "")}${chip("Mean", m.n ? num(m.sum_ms / m.n, 1) + " ms" : "—")}${chip("Over 3 s", m.over_3s, m.over_3s ? "bad" : "good")}${chip("This session", `${ms.n} · slowest ${ms.n ? num(ms.max_ms, 1) : "—"} ms`)}</div>`;
   k += `<table style="margin-top:8px"><thead><tr><th>Received</th><th>Dose</th><th>Class</th><th>Score</th><th>Model A</th><th>Gateway total</th><th>Decision</th></tr></thead><tbody>`;
   if (!ds.length) k += `<tr><td colspan="7" class="wait">Send a dose request to see its class and time.</td></tr>`;
   for (const d of ds) {
@@ -307,7 +425,15 @@ function renderEvidence(s) {
       <td>${num(d.model_a_latency_ms, 1)} ms</td><td>${num(d.station_ms, 1)} ms</td><td class="${d.decision === "ACCEPT" ? "done" : "bad"}">${esc(d.decision)}${d.decision === "REJECT" ? " · " + esc(d.reason_code) : ""}</td></tr>`;
   }
   k += `</tbody></table><div class="note">The 1,000-request timing run (ICS-AT-03) is <code>python -m model_a.latency_test</code>.</div>`;
-  $("ev-s4").innerHTML = k;
+  setHTML("ev-s4", k);
+}
+
+function renderC1(E) {
+  let h = `<div class="note" style="margin-top:0">C1: only approved dilute acid and base, each at most 5 wt%. These four bottles are the only channels the gateway accepts; a command naming anything else is rejected as malformed.</div>`;
+  h += `<table class="ev-tbl" style="margin-top:8px"><thead><tr><th>Pump</th><th>Bottle</th><th>Chemical</th><th>Strength</th><th>wt%</th><th>≤ 5 wt%</th></tr></thead><tbody>`;
+  for (const b of E.bottles || []) h += `<tr><td>${b.pump}</td><td>${esc(b.words)}</td><td>${esc(b.chemical)}</td><td>${b.molarity} M</td><td>${num(b.wt_pct, 2)}</td><td>${b.pass ? `<span class="pass">PASS</span>` : `<span class="fail">FAIL</span>`}</td></tr>`;
+  h += `</tbody></table><div class="note">wt% = mol/L × molar mass ÷ (10 × density). The labelled bottles and the lab approval are at the booth.</div>`;
+  setHTML("ev-c1", h);
 }
 
 function renderActions(s) {
@@ -492,10 +618,39 @@ for (const t of document.querySelectorAll("#log-tabs .tab")) {
 for (const t of document.querySelectorAll("#ev-tabs .tab")) {
   t.onclick = () => {
     evTab = t.dataset.tab;
+    try { localStorage.setItem("evTab", evTab); } catch (e) { /* fine */ }
     document.querySelectorAll("#ev-tabs .tab").forEach((x) => x.classList.toggle("on", x === t));
-    for (const k of ["timing", "hold", "s4"]) $("ev-" + k).classList.toggle("hidden", k !== evTab);
+    for (const k of EV_TABS) $("ev-" + k).classList.toggle("hidden", k !== evTab);
   };
 }
+// demo panel buttons (the tabs re-render, so one listener on the panel)
+$("demo").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a === "hold-start") act("HOLD_START");
+  else if (a === "hold-stop") act("HOLD_STOP");
+  else if (a === "use-sugg" && S && S.hold && S.hold.suggestion) { $("dose-ch").value = S.hold.suggestion.channel_id; $("dose-ml").value = S.hold.suggestion.ml; $("dose-ml").focus(); }
+  else if (a === "run-out") {
+    const why = prompt("Why leave this run out of the statistics? (goes in the audit log)", "rehearsal");
+    if (why !== null) act("RUN_INCLUDE", {key: b.dataset.key, included: false, why});
+  } else if (a === "run-in") act("RUN_INCLUDE", {key: b.dataset.key, included: true});
+  else if (a === "s2-cap" || a === "s2-lock") {
+    if (a === "s2-lock" && !(S && S.gateway.lockout_s >= 2 && !S.pending)) return;
+    b.disabled = true;
+    const req = a === "s2-cap" ? {channel_id: "BASE_FINE", volume_ml: 25} : {channel_id: "BASE_FINE", volume_ml: 1};
+    let r;
+    try { r = await api("/api/dose", req); } catch (err) { r = {decision: "NOT_SENT", words: "Could not reach the HMI server."}; }
+    const g = GROUP_WORDS[r.group] || r.group || "";
+    s2Reply = `<div class="reply ${r.decision === "REJECT" ? "rej" : r.decision === "ACCEPT" ? "acc" : "info"}"><b>${esc(req.volume_ml)} mL request: ${esc(r.decision === "REJECT" ? "Rejected — " + g : r.decision === "ACCEPT" ? "Accepted" : "Not sent")}</b>${r.reason_code ? ` <b class="code">(${esc(r.reason_code)})</b>` : ""}<br>${esc(r.words || "")}</div>`;
+    poll(); pollAudit(true);
+  }
+});
+$("btn-ev-reset").onclick = async () => {
+  if (!confirm("Start a fresh evidence record? The current one is kept as a file on the Pi, but the Demo panel starts from zero.")) return;
+  const r = await act("EVIDENCE_RESET");
+  alert(r && r.ok ? `Fresh record started. The old one is kept as ${r.kept}.` : (r && r.error) || "failed");
+};
 // engineer panel
 const simOut = (r) => { $("sim-out").textContent = r && r.ok === false ? r.error : "Done."; };
 $("btn-sim-scn").onclick = () => act("SIM_UPSET", {scenario: $("sim-scenario").value}).then(simOut);
@@ -517,6 +672,8 @@ poll();
 // the demo panel remembers whether it was open (per browser)
 try {
   if (localStorage.getItem("demoOpen") === "1") $("demo").open = true;
+  const t0 = localStorage.getItem("evTab");
+  if (t0 && EV_TABS.includes(t0)) document.querySelector(`#ev-tabs .tab[data-tab="${t0}"]`).click();
   $("demo").addEventListener("toggle", () => { try { localStorage.setItem("demoOpen", $("demo").open ? "1" : "0"); } catch (e) {} });
 } catch (e) { /* storage blocked: stays closed */ }
 setInterval(poll, 250);

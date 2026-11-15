@@ -157,3 +157,19 @@ select,input[type=number]{font-family:inherit;font-size:16px;padding:9px;border:
 .demo[open]>summary{border-bottom:1px dashed var(--border)}
 .demo-body{padding:0 0 12px}
 .demo-ev{padding:4px 18px 0}
+
+/* FPR evidence tabs */
+.ev-since{font-size:12px;text-transform:none;letter-spacing:0;color:var(--muted)}
+.st{display:inline-block;min-width:66px;text-align:center;font-size:12px;font-weight:bold;padding:3px 8px;border-radius:3px;letter-spacing:.5px}
+.st-PASS{background:#E3F1EA;color:#0F5A42}.st-FAIL{background:#FBE9E9;color:var(--red)}
+.st-NOT_RUN{background:#F3F4F6;color:#8A9099}.st-RUNNING,.st-PARTIAL{background:#FFF4DE;color:#7A5200}
+.st-BOOTH{background:var(--purple-bg);color:#4B3A80}
+.ev-tbl td{font-size:14px}.ev-tbl td.it{font-weight:bold;white-space:nowrap}
+.ev-tbl .sub{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.ev-tbl tr.out td{color:#9AA0A8;text-decoration:line-through}
+.ev-tbl tr.out td.keep{text-decoration:none}
+.ev-tbl tr.live td{background:#FFFBF2}
+.ev-sum{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+.ev-sum .chip b{margin-left:6px}
+.xbtn{font-size:12px;padding:2px 7px;border:1px solid var(--border);border-radius:3px;background:#fff;cursor:pointer;color:var(--muted)}
+.demo-ev>div{overflow-x:auto}

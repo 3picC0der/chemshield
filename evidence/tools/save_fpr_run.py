@@ -3,7 +3,8 @@
     ../chemshield/.venv/bin/python evidence/tools/save_fpr_run.py <folder name> [--station http://<pi>:8000]
 
 Writes evidence/fpr_runs/<folder>/: audit.jsonl (hash-chained), audit.csv, int_s1_timing.csv,
-s1_hold.csv, ph_trend.csv, state.json (the station's state, including last_event with the
+s1_hold.csv, ph_trend.csv, recovery_runs.csv (every run so far),
+spec_scorecard.csv (PASS/FAIL per spec), state.json (the station's state, including last_event with the
 reagent used and the recovery time) and summary.txt.
 """
 from __future__ import annotations
@@ -30,7 +31,8 @@ def main() -> int:
     out = ROOT / "evidence" / "fpr_runs" / a.name
     out.mkdir(parents=True, exist_ok=True)
     base = a.station.rstrip("/")
-    for name in ("audit.jsonl", "audit.csv", "int_s1_timing.csv", "s1_hold.csv", "ph_trend.csv"):
+    for name in ("audit.jsonl", "audit.csv", "int_s1_timing.csv", "s1_hold.csv", "ph_trend.csv",
+                 "recovery_runs.csv", "spec_scorecard.csv"):
         try:
             (out / name).write_bytes(fetch(f"{base}/api/export/{name}"))
         except Exception as e:                                 # one missing export is not fatal

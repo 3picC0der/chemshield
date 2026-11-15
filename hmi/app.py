@@ -108,7 +108,8 @@ def verify() -> JSONResponse:
 
 @app.get("/api/export/{name}")
 def export(name: str) -> Response:
-    allowed = {"audit.csv", "audit.jsonl", "int_s1_timing.csv", "s1_hold.csv", "ph_trend.csv"}
+    allowed = {"audit.csv", "audit.jsonl", "int_s1_timing.csv", "s1_hold.csv", "ph_trend.csv",
+               "recovery_runs.csv", "spec_scorecard.csv"}
     if name not in allowed:
         return JSONResponse({"error": "unknown export"}, status_code=404)
     code, body = _station(f"/api/export/{name}", timeout=10.0)

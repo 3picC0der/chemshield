@@ -51,16 +51,26 @@
   <div class="demo-body">
 
 <section class="demo-ev">
-    <h2>Evidence for the reviewers
+    <h2>Evidence for the reviewers <span class="ev-since" id="ev-since"></span>
       <span class="tabs" id="ev-tabs">
-        <span class="tab on" data-tab="timing">Recovery-mode timing</span>
-        <span class="tab" data-tab="hold">10-minute pH hold</span>
-        <span class="tab" data-tab="s4">Model A timing</span>
+        <span class="tab on" data-tab="specs">All specs</span>
+        <span class="tab" data-tab="runs">Recovery runs</span>
+        <span class="tab" data-tab="timing">INT-S1 timing</span>
+        <span class="tab" data-tab="hold">S1 hold</span>
+        <span class="tab" data-tab="s2">S2 dose limits</span>
+        <span class="tab" data-tab="attacks">S3 / C2 attacks</span>
+        <span class="tab" data-tab="s4">S4 Model A</span>
+        <span class="tab" data-tab="c1">C1 reagents</span>
       </span>
     </h2>
-    <div id="ev-timing"></div>
+    <div id="ev-specs"></div>
+    <div id="ev-runs" class="hidden"></div>
+    <div id="ev-timing" class="hidden"></div>
     <div id="ev-hold" class="hidden"></div>
+    <div id="ev-s2" class="hidden"></div>
+    <div id="ev-attacks" class="hidden"></div>
     <div id="ev-s4" class="hidden"></div>
+    <div id="ev-c1" class="hidden"></div>
   </section>
   </div>
 </details>
@@ -203,6 +213,9 @@
       <div class="row"><a class="linkbtn" href="/api/export/int_s1_timing.csv">INT-S1 timing (CSV)</a></div>
       <div class="row"><a class="linkbtn" href="/api/export/s1_hold.csv">S1 10-minute hold (CSV)</a></div>
       <div class="row"><a class="linkbtn" href="/api/export/ph_trend.csv">pH log (CSV)</a></div>
+      <div class="row"><a class="linkbtn" href="/api/export/recovery_runs.csv">Recovery runs (CSV)</a></div>
+      <div class="row"><a class="linkbtn" href="/api/export/spec_scorecard.csv">Spec scorecard (CSV)</a></div>
+      <div class="row"><button class="btn2" id="btn-ev-reset">Start a fresh evidence record</button></div>
       <div class="note" id="link-info"></div>
     </div>
   </div>

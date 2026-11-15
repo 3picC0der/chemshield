@@ -39,6 +39,7 @@ from chemshield_gateway.gateway_validator import GatewayValidator
 from chemshield_gateway.models import ProcessState
 
 from .audit import StationAuditLog
+from .evidence import EvidenceStore
 from .links import Link
 
 BAND = (6.0, 8.5)            # INT-S1 / INT-S2 band: outside it is an unsafe event
@@ -98,6 +99,9 @@ class Station:
         self.config = gateway_config(secret)
         self.gstate = ProcessState(ph=7.0, mode="NORMAL")
         self.audit = StationAuditLog(self.log_dir / "audit.jsonl")
+        # FPR evidence summary across restarts (hmi/logs/fpr_evidence.json); see evidence.py
+        self.evidence = EvidenceStore(self.log_dir.parent / "fpr_evidence.json", session=self.log_dir.name)
+        self._last_in_tank_t: float | None = None      # when the last dose went in (S2 gap)
 
         # Model A (Belal): reads the same probe history the station feeds it
         self.model_a = None
@@ -210,6 +214,7 @@ class Station:
             if self.mode in ("RECOVERY",) and self.auto_recovery:
                 self._recovery_step(now)
             self._pending_step(now)
+            self.evidence.save()
 
     def _on_reading(self, t: float, ph: float) -> None:
         self.recent.append((t, ph))
@@ -246,6 +251,8 @@ class Station:
         mean3 = self._mean3()
         inside = mean3 is not None and BAND[0] <= mean3 <= BAND[1] and len(self.recent) == CONFIRM_READINGS
         if inside:
+            if self.event.get("t_first_in_band") is None:
+                self.event["t_first_in_band"] = self.clock()
             if self.in_band_since is None:
                 self.in_band_since = (self.clock(), _wall())
                 self.event["t_in_band"] = self.in_band_since[0]
@@ -276,7 +283,7 @@ class Station:
             "uno_locked_utc": None, "t_uno_locked": None,
             "hmi_shown_utc": None, "t_hmi_shown": None,
             "closed_utc": None, "recovery_time_s": None, "in_band_first_utc": None,
-            "doses": [], "escalations": [], "source": self.link.kind, "t_in_band": None,
+            "doses": [], "escalations": [], "source": self.link.kind, "t_in_band": None, "t_first_in_band": None,
             "min_ph": mean3, "max_ph": mean3,
         }
         self.audit.event("EVENT_CONFIRMED", f"{ev['cls']}: {CONFIRM_READINGS} readings in a row "
@@ -307,6 +314,7 @@ class Station:
         used = self.gateway.event_mmol_used.get(ev["id"], 0.0)
         self.audit.event("EVENT_CLOSED", f"pH back inside 6.0-8.5 at {ev['recovery_time_s']} s and held "
                          f"{self.dwell_s:.0f} s; reagent used {used:.2f} of 50 mmol", event_id=ev["id"])
+        self.evidence.run_closed(self._run_row(ev, "recovered"))
         self.event = None
         self.block, self.plan, self.escalation = [], None, None
         self.next_plan_at = None
@@ -444,7 +452,7 @@ class Station:
         E-stop or a lost heartbeat, so it is sent again every 10 s; HALT stops it."""
         if not self.idle_mix or not hasattr(self.link, "mix"):
             return
-        want = 0 if self.mode == "HALT" else self.idle_mix
+        want = 0 if self.mode == "HALTED" else self.idle_mix
         last, at = self._mix_sent
         if want != last or now - at > 10.0:
             self.link.mix(want)
@@ -490,6 +498,11 @@ class Station:
             result["model_a_reason"] = i3.get("reason", "")
             result["model_a_version"] = i3.get("model_version", "")
         group = result["group"]
+        gap = None
+        if result["decision"] == "ACCEPT" and self._last_in_tank_t is not None:
+            gap = self.clock() - self._last_in_tank_t
+        result["since_last_dose_s"] = round(gap, 2) if gap is not None else None
+        self.evidence.decision(result, sender, gap)
         self.counters[group] = self.counters.get(group, 0) + 1
         self.counters["TOTAL"] = self.counters.get("TOTAL", 0) + 1
         self.decisions.append(result)
@@ -597,6 +610,7 @@ class Station:
         # the 15 s mixing wait counts from when the dose actually went in
         self.gstate.last_dose_accepted_at_s = self.gateway.clock()
         self.mixing_until = now + MIX_S
+        self._last_in_tank_t = now
         added = _wall()
         if self.event is not None:
             for d in self.event["doses"]:
@@ -662,6 +676,7 @@ class Station:
         if ml > 0:
             self.gstate.last_dose_accepted_at_s = self.gateway.clock()
             self.mixing_until = self.clock() + MIX_S
+            self._last_in_tank_t = self.clock()
             if known and self.model_a is not None:
                 self.model_a.dose_added(known["command_id"], delivered_ml=ml)
 
@@ -765,6 +780,7 @@ class Station:
             self.event["status"] = "closed"
             self.event["closed_utc"] = _wall()
             self.audit.event("EVENT_ABANDONED", f"event left open by a {why}", event_id=self.event["id"])
+            self.evidence.run_closed(self._run_row(self.event, "abandoned"))
             self.event = None
         self.block, self.plan, self.escalation = [], None, None
         self.next_plan_at = self.next_block_at = None
@@ -804,6 +820,7 @@ class Station:
         h["active"] = False
         h["stopped_utc"] = _wall()
         s = self._hold_summary()
+        self.evidence.hold_stopped(s)
         self.audit.event("HOLD_LOG_STOP", f"hold log stopped at {s['elapsed_s']:.0f} s: pH {s['min']}-{s['max']}, "
                          f"{'PASS' if s['pass'] else 'not a pass'}", source="HMI")
         return {"ok": True}
@@ -906,6 +923,7 @@ class Station:
                 "decisions": list(self.decisions)[-6:][::-1],
                 "hold": self._hold_summary(),
                 "timing": [self._timing_row(e) for e in self.events][-8:][::-1],
+                "evidence": self._evidence_view(now),
                 "chem_source": self.chem_source,
                 "key_source": self.key_source,
                 "demo_key": "demo key" in self.key_source,
@@ -914,6 +932,79 @@ class Station:
                 from sim import scenarios as SC
                 s["sim"] = {"scenarios": SC.list_names()}
             return s
+
+    # ---------------------------------------------------------------- FPR evidence
+    def _run_row(self, ev: dict[str, Any], outcome: str) -> dict[str, Any]:
+        """One recovery run, judged against INT-S1, INT-S2, INT-S3, C3 and S6."""
+        t = self._timing_row(ev)
+        acid = ev["direction"] == "acid"
+        lo, hi = ev.get("min_ph"), ev.get("max_ph")
+        far = hi if acid else lo                     # the side the recovery could overshoot to
+        spill = lo if acid else hi
+        first = None if ev.get("t_first_in_band") is None else round(ev["t_first_in_band"] - ev["t_confirm"], 1)
+        used = self.gateway.event_mmol_used.get(ev["id"], 0.0)
+        delivered = sum(d["mmol"] for d in ev["doses"] if d.get("added_utc"))
+        rec = ev["recovery_time_s"]
+        worst = t["worst_ms"]
+        return {
+            "key": f"{self.log_dir.name}/{ev['id']}", "event_id": ev["id"], "source": ev["source"],
+            "direction": ev["direction"], "first_out_utc": ev["first_out_utc"],
+            "confirmed_utc": ev["confirmed_utc"], "confirm_ph": ev["confirm_ph"], "readings": ev["readings"],
+            "spill_side_ph": round(spill, 2) if spill is not None else None,
+            "far_side_ph": round(far, 2) if far is not None else None,
+            "int_s1_ms": worst, "confirm_to_recovery_ms": t["confirm_to_recovery_ms"],
+            "confirm_to_uno_locked_ms": t["confirm_to_uno_locked_ms"],
+            "confirm_to_hmi_shown_ms": t["confirm_to_hmi_shown_ms"],
+            "int_s1_pass": worst is not None and worst < 2000.0,
+            "first_in_band_s": first, "int_s2_pass": first is not None and first <= 300.0,
+            "int_s3_pass": far is not None and (far <= FAR[1] if acid else far >= FAR[0]),
+            "reagent_mmol": round(used, 3), "delivered_mmol": round(delivered, 3), "c3_pass": used <= 50.0,
+            "recovery_time_s": rec, "s6_pass": outcome == "recovered" and rec is not None and rec <= 300.0,
+            "doses": len(ev["doses"]),
+            "dose_list": [f"{d['ml']:.2f} mL {CHANNELS[d['channel_id']]['words']}" for d in ev["doses"]],
+            "closed_utc": ev.get("closed_utc"), "outcome": outcome,
+        }
+
+    def _evidence_view(self, now: float) -> dict[str, Any]:
+        ev = self.event
+        live = None
+        if ev is not None:
+            live = self._run_row(ev, "in progress")
+            live["elapsed_s"] = round(now - ev["t_confirm"], 1)
+        e = self.evidence
+        from .evidence import bottles
+        return {
+            "since": e.data["since"], "session": e.session,
+            "scorecard": e.scorecard(live_event=ev, hold=self._hold_summary(),
+                                     model_a_loaded=self.model_a is not None and not self.model_a_error),
+            "runs": list(reversed(e.data["runs"][-40:])), "live": live,
+            "attacks": {"all": e.data["all"]["attacks"], "session": e.sess["attacks"]},
+            "model_a": {"all": e.data["all"]["model_a"], "session": e.sess["model_a"]},
+            "s2": {"all": e.data["all"]["s2"], "session": e.sess["s2"]},
+            "holds": list(reversed(e.data["holds"][-10:])),
+            "bottles": bottles(),
+        }
+
+    def set_run_included(self, key: str, included: bool, why: str) -> dict[str, Any]:
+        if not self.evidence.set_included(key, included, why):
+            return {"ok": False, "error": "no such run"}
+        self.audit.event("EVIDENCE_RUN", f"recovery run {key} {'counted again' if included else 'left out of the statistics'}"
+                         + (f": {why}" if why and not included else ""), source="HMI")
+        return {"ok": True}
+
+    def reset_evidence(self) -> dict[str, Any]:
+        old = self.evidence.reset()
+        self.audit.event("EVIDENCE_RESET", f"FPR evidence record started fresh; the old one is kept as {old}",
+                         source="HMI")
+        return {"ok": True, "kept": old}
+
+    def runs_csv(self) -> str:
+        return self.evidence.runs_csv()
+
+    def scorecard_csv(self) -> str:
+        return self.evidence.scorecard_csv(self.evidence.scorecard(
+            live_event=self.event, hold=self._hold_summary(),
+            model_a_loaded=self.model_a is not None and not self.model_a_error))
 
     def _event_view(self, ev: dict[str, Any], now: float) -> dict[str, Any]:
         closed = ev["status"] == "closed"

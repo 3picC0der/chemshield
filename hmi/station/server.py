@@ -4,7 +4,8 @@
     POST /api/operator   a signed operator action (HALT, RESUME, DOSE_ADDED, ...)
     GET  /api/state      everything the HMI draws (read-only, no secrets)
     GET  /api/audit      the hash-chained log, newest first (?only=rejected)
-    GET  /api/export/... audit.csv, audit.jsonl, int_s1_timing.csv, s1_hold.csv, ph_trend.csv
+    GET  /api/export/... audit.csv, audit.jsonl, int_s1_timing.csv, s1_hold.csv, ph_trend.csv,
+                         recovery_runs.csv, spec_scorecard.csv
     GET  /api/verify     re-checks the whole hash chain
 
 Nothing here doses without a valid signature: the laptop HMI holds the operator key.
@@ -107,6 +108,16 @@ def build_app(station: Station) -> FastAPI:
         with station.lock:
             return _export(station.hold_csv(), "CHE-AT-04_pH_hold.csv")
 
+    @app.get("/api/export/recovery_runs.csv")
+    def export_runs():
+        with station.lock:
+            return _export(station.runs_csv(), "FPR_recovery_runs.csv")
+
+    @app.get("/api/export/spec_scorecard.csv")
+    def export_scorecard():
+        with station.lock:
+            return _export(station.scorecard_csv(), "FPR_spec_scorecard.csv")
+
     @app.get("/api/export/ph_trend.csv")
     def export_trend():
         with station.lock:
@@ -136,6 +147,11 @@ def _do_action(station: Station, action: str, args: dict[str, Any]) -> dict[str,
         return station.hold_start()
     if a == "HOLD_STOP":
         return station.hold_stop()
+    if a == "RUN_INCLUDE":
+        return station.set_run_included(str(args.get("key", "")), bool(args.get("included", True)),
+                                        str(args.get("why", ""))[:120])
+    if a == "EVIDENCE_RESET":
+        return station.reset_evidence()
 
     # ---- simulator controls: only exist when the pH source is the simulator
     link = station.link
