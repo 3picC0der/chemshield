@@ -4,8 +4,10 @@
 #   bash fpr.sh start      firewall + station on the Pi, sets the Pi's clock, opens the HMI
 #   bash fpr.sh panel      stops the station and opens the Uno panel (prime / check pumps, pH)
 #   bash fpr.sh attack     the five network attacks against the gateway (add --only replay etc.)
+#   bash fpr.sh stealth    signed, in-limit but dangerous doses that only the AI Dose Guard can stop
 #   bash fpr.sh status     what is running and what the station sees
 #   bash fpr.sh stop       stops the HMI and the station
+#   bash fpr.sh poweroff   stops everything and shuts the Pi down safely (then unplug it)
 #
 # The Pi is 10.42.0.1 on its own Wi-Fi (ChemShield-Lab), the booth setup. When it is on the
 # phone hotspot instead:   PI=172.20.10.2 bash fpr.sh start
@@ -47,6 +49,10 @@ case "${1:-}" in
     shift
     exec $PY -m hmi.attack_demo --station "http://$PI:8000" "$@"
     ;;
+  stealth)
+    shift
+    exec $PY -W ignore -m hmi.stealth_attack --station "http://$PI:8000" "$@"
+    ;;
   status)
     echo "Pi $PI:"
     "${SSH[@]}" 'pgrep -af "[h]mi[.]station|[b]ench_panel" | cut -c1-90 || echo "  nothing running"; cd ~/chemshield && sudo bash gateway/pi_fan.sh status 2>/dev/null | head -1'
@@ -58,6 +64,12 @@ case "${1:-}" in
     stop_hmi
     stop_pi
     echo "HMI and station stopped."
+    ;;
+  poweroff)
+    stop_hmi
+    stop_pi
+    "${SSH[@]}" 'sudo systemctl poweroff' || true
+    echo "Pi is shutting down. Unplug it when its green light has stopped blinking (about 20 s)."
     ;;
   *)
     sed -n '2,12p' "$0"

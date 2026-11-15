@@ -1,0 +1,17 @@
+
+STEALTH ATTACK: signed with the stolen operator key, fresh, under 20 mL, after the mixing wait.
+Every rule check passes. Only the AI Dose Guard can tell these doses are dangerous.
+
+  base overdose    12.0 mL BASE_BULK at pH 7.10  (would go to pH 10.6)
+                   12 mL of 0.5 M NaOH into a neutral tank: pH would shoot above 10
+                   signature OK, fresh, under cap, after mixing wait -> BLOCKED by AI Dose Guard (HARMFUL, risk 1.00)
+
+  acid overdose    12.0 mL ACID_BULK at pH 7.07  (would go to pH 3.5)
+                   12 mL of 0.5 M HCl into a neutral tank: pH would crash below 4
+                   signature OK, fresh, under cap, after mixing wait -> BLOCKED by AI Dose Guard (HARMFUL, risk 1.00)
+
+  quiet base push   6.0 mL BASE_BULK at pH 7.07  (would go to pH 10.0)
+                   6 mL of 0.5 M NaOH, small enough to look routine: still leaves the band
+                   signature OK, fresh, under cap, after mixing wait -> BLOCKED by AI Dose Guard (HARMFUL, risk 1.00)
+
+Summary: 3 stealth commands sent, 3 blocked by the AI Dose Guard, 0 reached a pump
