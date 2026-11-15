@@ -3,14 +3,15 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const esc = (x) => String(x ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const AI = "AI Dose Guard";  // operator-facing name of the Model A safety classifier
+const esc = (x) => String(x ?? "").replace(/MODEL_A_/g, "AI_GUARD_").replace(/Model A/g, AI).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const num = (x, d = 1) => (x === null || x === undefined || Number.isNaN(Number(x))) ? "—" : Number(x).toFixed(d);
 const hms = (iso) => { if (!iso) return "—"; const t = new Date(iso); return t.toLocaleTimeString([], {hour12: false}); };
 const hmsms = (iso) => { if (!iso) return "—"; const t = new Date(iso); return t.toLocaleTimeString([], {hour12: false}) + "." + String(t.getMilliseconds()).padStart(3, "0"); };
 
 const CH_WORDS = {BASE_BULK: "NaOH 0.5 M bulk", BASE_FINE: "NaOH 0.005 M fine", ACID_BULK: "HCl 0.5 M bulk", ACID_FINE: "HCl 0.005 M fine"};
 const GROUP_WORDS = {REPLAY: "Replayed", STALE: "Stale", LIMIT: "Over limit", LOCKOUT: "Mixing lockout",
-  MODEL_A_BLOCK: "Model A block", AUTH: "Not authorised", SCHEMA: "Malformed", STATE: "Wrong state", ACCEPT: "Accepted", OTHER: "Other"};
+  MODEL_A_BLOCK: "Blocked by AI Dose Guard", AUTH: "Not authorised", SCHEMA: "Malformed", STATE: "Wrong state", ACCEPT: "Accepted", OTHER: "Other"};
 
 let S = null;               // last state
 let logOnly = "all";
@@ -197,9 +198,9 @@ function renderEventDetail(s) {
     h += `<div class="note" style="margin:0 0 8px">No unsafe event. An event is confirmed when 3 readings in a row are outside 6.0–8.5; the system then switches to recovery by itself.</div>`;
   }
   if (d) {
-    h += kv("Model A class", esc(d.model_a_label.replace("_CONTEXT", "")), d.model_a_label === "ACCEPTABLE_CONTEXT" ? "t-green" : "t-red");
-    h += kv("Model A risk score", num(d.model_a_score, 2));
-    h += kv("Model A time", `${num(d.model_a_latency_ms, 1)} ms <span class="note" style="margin:0">(limit 3000 ms)</span>`);
+    h += kv(`${AI} class`, esc(d.model_a_label.replace("_CONTEXT", "")), d.model_a_label === "ACCEPTABLE_CONTEXT" ? "t-green" : "t-red");
+    h += kv(`${AI} risk score`, num(d.model_a_score, 2));
+    h += kv(`${AI} time`, `${num(d.model_a_latency_ms, 1)} ms <span class="note" style="margin:0">(limit 3000 ms)</span>`);
     h += kv("For", `${esc(num(d.volume_ml, 1))} mL ${esc(CH_WORDS[d.channel_id] || d.channel_id)}`);
   }
   $("event-detail").innerHTML = h;
@@ -415,9 +416,9 @@ function renderAttacks(s, E) {
 function renderS4(s, E) {
   const m = E.model_a.all, ms = E.model_a.session;
   const ds = (s.decisions || []).filter((d) => d.model_a_label && d.model_a_label !== "NOT_CALLED");
-  let k = `<div class="note" style="margin-top:0">S4: every dose request that reaches Model A gets a class and a risk score within 3 s. Times are measured on the Pi for each request.</div>`;
+  let k = `<div class="note" style="margin-top:0">S4: every dose request that reaches the AI Dose Guard gets a class (ACCEPTABLE / HARMFUL) and a risk score from the AI Dose Guard within 3 s. Times are measured on the Pi for each request.</div>`;
   k += `<div class="ev-sum">${chip("Doses classified", m.n)}${chip("Slowest", m.n ? num(m.max_ms, 1) + " ms" : "—", m.n && m.over_3s === 0 ? "good" : "")}${chip("Mean", m.n ? num(m.sum_ms / m.n, 1) + " ms" : "—")}${chip("Over 3 s", m.over_3s, m.over_3s ? "bad" : "good")}${chip("This session", `${ms.n} · slowest ${ms.n ? num(ms.max_ms, 1) : "—"} ms`)}</div>`;
-  k += `<table style="margin-top:8px"><thead><tr><th>Received</th><th>Dose</th><th>Class</th><th>Score</th><th>Model A</th><th>Gateway total</th><th>Decision</th></tr></thead><tbody>`;
+  k += `<table style="margin-top:8px"><thead><tr><th>Received</th><th>Dose</th><th>Class</th><th>Score</th><th>AI Dose Guard</th><th>Gateway total</th><th>Decision</th></tr></thead><tbody>`;
   if (!ds.length) k += `<tr><td colspan="7" class="wait">Send a dose request to see its class and time.</td></tr>`;
   for (const d of ds) {
     k += `<tr><td>${hmsms(d.received_utc)}</td><td>${num(d.volume_ml, 1)} mL ${esc(CH_WORDS[d.channel_id] || d.channel_id)}</td>
@@ -468,7 +469,7 @@ function renderSafety(s) {
   h += kv("Uno link", l.alive ? `talking (${num(l.line_age_s, 1)} s)` : "LOST: dosing blocked", l.alive ? "t-green" : "t-red");
   h += kv("Uno light", esc(l.led_words));
   h += kv("Mixing lockout", g.lockout_s > 0 ? `${num(g.lockout_s, 0)} s left` : "clear", g.lockout_s > 0 ? "t-amber" : "");
-  h += kv("Model A", s.model_a.loaded ? "on · can block, never approve" : `NOT LOADED (${esc(s.model_a.error)})`, s.model_a.loaded ? "" : "t-red");
+  h += kv(AI, s.model_a.loaded ? "on · can block, never approve" : `NOT LOADED (${esc(s.model_a.error)})`, s.model_a.loaded ? "" : "t-red");
   h += kv("Audit chain", g.chain_ok.ok ? `intact (${g.records})` : "BROKEN", g.chain_ok.ok ? "t-green" : "t-red");
   if (l.kind === "PROBE") h += kv("E-stop", l.estop ? "PRESSED" : "released", l.estop ? "t-red" : "");
   $("safety").innerHTML = h;
@@ -490,7 +491,7 @@ function renderCounters(s) {
 
 // ------------------------------------------------------------------ security monitor (FPR)
 const SEC_CYBER = [["REPLAY", "Replayed"], ["STALE", "Stale"], ["AUTH", "Forged / unsigned"], ["SCHEMA", "Malformed"]];
-const SEC_SAFETY = [["LIMIT", "Over 20 mL"], ["LOCKOUT", "Mixing wait"], ["MODEL_A_BLOCK", "Model A"]];
+const SEC_SAFETY = [["LIMIT", "Over 20 mL"], ["LOCKOUT", "Mixing wait"], ["MODEL_A_BLOCK", AI]];
 let secPrev = null;
 const secHits = [];              // [time ms, group, how many]
 const secHitUntil = {};
@@ -562,7 +563,7 @@ function renderLog(recs) {
       `<span class="${r.decision === "REJECT" ? "rej" : "acc2"}">${esc(r.decision === "REJECT" ? (GROUP_WORDS[r.group] || r.group) : "ACCEPTED")}</span>`;
     let msg = esc(r.message || "");
     if (r.decision === "REJECT") msg += `<br><span class="evt">${esc(r.reason_code)}: ${esc(r.words)}</span>`;
-    if (r.model_a_label && r.model_a_label !== "NOT_CALLED") msg += `<br><span class="evt">Model A ${esc(r.model_a_label.replace("_CONTEXT", ""))} · ${num(r.model_a_score, 2)}</span>`;
+    if (r.model_a_label && r.model_a_label !== "NOT_CALLED") msg += `<br><span class="evt">${AI}: ${esc(r.model_a_label.replace("_CONTEXT", ""))} · ${num(r.model_a_score, 2)}</span>`;
     h += `<tr><td>${hms(r.timestamp_utc)}</td><td class="src">${esc(r.source)}</td><td class="msg">${msg}</td><td>${dec}</td><td>${reason}</td><td>${esc(r.hash_short)}</td></tr>`;
   }
   if (!recs.length) h = `<tr><td colspan="6" class="wait">${logOnly === "rejected" ? "No rejected commands yet." : "Empty."}</td></tr>`;
@@ -576,16 +577,16 @@ function showReply(r) {
   if (r.decision === "ACCEPT") {
     el.className = "reply acc";
     el.innerHTML = `<b>Accepted</b> by the gateway. Add the dose when the Dose now box asks.
-      <span class="sm">Model A: ${esc((r.model_a_label || "").replace("_CONTEXT", ""))} · risk ${num(r.model_a_score, 2)} · ${num(r.model_a_latency_ms, 1)} ms · ${num(r.dose_mmol, 3)} mmol</span>`;
+      <span class="sm">${AI}: ${esc((r.model_a_label || "").replace("_CONTEXT", ""))} · risk ${num(r.model_a_score, 2)} · ${num(r.model_a_latency_ms, 1)} ms · ${num(r.dose_mmol, 3)} mmol</span>`;
   } else if (r.decision === "REJECT") {
     el.className = "reply rej";
     const g = GROUP_WORDS[r.group] || r.group;
     let extra = "";
-    if (r.model_a_label && r.model_a_label !== "NOT_CALLED") extra = `<span class="sm">Model A: ${esc(r.model_a_label.replace("_CONTEXT", ""))} · risk ${num(r.model_a_score, 2)} · ${num(r.model_a_latency_ms, 1)} ms${r.model_a_reason ? " · " + esc(r.model_a_reason) : ""}</span>`;
+    if (r.model_a_label && r.model_a_label !== "NOT_CALLED") extra = `<span class="sm">${AI}: ${esc(r.model_a_label.replace("_CONTEXT", ""))} · risk ${num(r.model_a_score, 2)} · ${num(r.model_a_latency_ms, 1)} ms${r.model_a_reason ? " · " + esc(r.model_a_reason) : ""}</span>`;
     el.innerHTML = `<b>Rejected — ${esc(g)}</b> <b class="code">(${esc(r.reason_code)})</b><br>${esc(r.words)}${extra}`;
   } else {
     el.className = "reply info";
-    el.textContent = r.words || r.error || "Not sent.";
+    el.textContent = String(r.words || r.error || "Not sent.").replace(/Model A/g, AI);
   }
 }
 

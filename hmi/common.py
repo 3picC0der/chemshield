@@ -79,8 +79,8 @@ REASONS: dict[str, tuple[str, str]] = {
     "DOSE_LIMIT": ("LIMIT", "Over the dose limit (20 mL per dose)"),
     "EVENT_MMOL_LIMIT": ("LIMIT", "Would take this event over the 50 mmol reagent limit"),
     "MIXING_LOCKOUT": ("LOCKOUT", "Tank still mixing: 15 s must pass between doses"),
-    "MODEL_A_BLOCK": ("MODEL_A_BLOCK", "Model A judged this dose unsafe for the tank right now"),
-    "MODEL_A_TIMEOUT": ("MODEL_A_BLOCK", "Model A did not answer in time, so the dose is blocked"),
+    "MODEL_A_BLOCK": ("MODEL_A_BLOCK", "The AI Dose Guard judged this dose unsafe for the tank right now"),
+    "MODEL_A_TIMEOUT": ("MODEL_A_BLOCK", "The AI Dose Guard did not answer in time, so the dose is blocked"),
     "INVALID_HMAC": ("AUTH", "Not signed with the operator key"),
     "MISSING_SIGNATURE": ("AUTH", "Not signed: the command carries no signature"),
     "BAD_CLIENT_CERT": ("AUTH", "Sender's certificate is not trusted"),
@@ -95,7 +95,7 @@ REASONS: dict[str, tuple[str, str]] = {
 }
 GROUP_WORDS = {
     "REPLAY": "Replayed", "STALE": "Stale", "LIMIT": "Over limit", "LOCKOUT": "Mixing lockout",
-    "MODEL_A_BLOCK": "Model A block", "AUTH": "Not authorised", "SCHEMA": "Malformed",
+    "MODEL_A_BLOCK": "Blocked by AI Dose Guard", "AUTH": "Not authorised", "SCHEMA": "Malformed",
     "STATE": "Wrong state", "ACCEPT": "Accepted",
 }
 
