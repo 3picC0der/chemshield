@@ -7,6 +7,7 @@
 #   bash fpr.sh stealth    signed, in-limit but dangerous doses that only the AI Dose Guard can stop
 #   bash fpr.sh status     what is running and what the station sees
 #   bash fpr.sh evidence   opens the FPR evidence page (works offline)
+# Outside attacker on a second laptop: see attacker_kit/README.md
 #   bash fpr.sh stop       stops the HMI and the station
 #   bash fpr.sh poweroff   stops everything and shuts the Pi down safely (then unplug it)
 #
