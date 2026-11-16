@@ -24,7 +24,7 @@ for kind in ("pi", "rdo"):
 pi, rd = out["pi"], out["rdo"]
 both = [i for i in range(len(scs)) if pi[i]["in_band"] and rd[i]["in_band"]]
 Rp = np.array([pi[i]["R"] for i in both]); Rr = np.array([rd[i]["R"] for i in both])
-res = dict(chem_source=src, events=len(scs), pi_success=int(sum(r["in_band"] for r in pi)),
+res = dict(events=len(scs), pi_success=int(sum(r["in_band"] for r in pi)),
            solver_success=int(sum(r["in_band"] for r in rd)), paired=len(both),
            pi_mean_mmol=float(Rp.mean()), solver_mean_mmol=float(Rr.mean()),
            saving_total_pct=float(100 * (1 - Rr.sum() / Rp.sum())),

@@ -1,7 +1,7 @@
 # S9 · Solver vs PI controller (simulation, evidence level 6)
 
 Requirement: ≥ 15 % less reagent than a PI controller.
-Method: `s9_compare.py` runs the recovery solver (rdo) and the PI controller from `sim/sim2.py` on the **same 600 simulated spills with the same noise** (seed 261/11), with the same pumps, 20 mL cap and mixing holds. Chemistry table: PLACEHOLDER.
+Method: `s9_compare.py` runs the recovery solver (rdo) and the PI controller from `sim/sim2.py` on the **same 600 simulated spills with the same noise** (seed 261/11), with the same pumps, 20 mL cap and mixing holds.
 
 | | PI controller | ChemShield solver |
 |---|---|---|

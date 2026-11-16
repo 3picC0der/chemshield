@@ -6,6 +6,7 @@
 #   bash fpr.sh attack     the five network attacks against the gateway (add --only replay etc.)
 #   bash fpr.sh stealth    signed, in-limit but dangerous doses that only the AI Dose Guard can stop
 #   bash fpr.sh status     what is running and what the station sees
+#   bash fpr.sh evidence   opens the FPR evidence page (works offline)
 #   bash fpr.sh stop       stops the HMI and the station
 #   bash fpr.sh poweroff   stops everything and shuts the Pi down safely (then unplug it)
 #
@@ -52,6 +53,9 @@ case "${1:-}" in
   stealth)
     shift
     exec $PY -W ignore -m hmi.stealth_attack --station "http://$PI:8000" "$@"
+    ;;
+  evidence)
+    open evidence/fpr_runs/FPR_FINAL_20261115/index.html
     ;;
   status)
     echo "Pi $PI:"

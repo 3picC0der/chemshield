@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChemShield FPR Evidence</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f5f2; --surface: #ffffff; --ink: #0b0b0b; --ink2: #52514e; --muted: #8a8984;
+    --line: #e6e5e1; --accent: #2a78d6; --met: #0f7a3a; --met-bg: #e6f4ea;
+    --open: #8a5a00; --open-bg: #fdf3dc; --no: #b3261e; --no-bg: #fbe9e7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121211; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #8f8e88;
+      --line: #2e2e2b; --accent: #3987e5; --met: #5cc983; --met-bg: #183224;
+      --open: #e8b44a; --open-bg: #33290f; --no: #f08a80; --no-bg: #3a1d1a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #8f8e88;
+    --line: #2e2e2b; --accent: #3987e5; --met: #5cc983; --met-bg: #183224;
+    --open: #e8b44a; --open-bg: #33290f; --no: #f08a80; --no-bg: #3a1d1a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 16px 60px; }
+  header h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--ink2); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 22px 0 8px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile b { display: block; font-size: 28px; line-height: 1.1; }
+  .tile span { color: var(--ink2); font-size: 13px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
+  tr:last-child td { border-bottom: 0; }
+  td.item { font-weight: 700; white-space: nowrap; }
+  td.req { color: var(--ink2); min-width: 170px; }
+  td.res { min-width: 280px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .met { color: var(--met); background: var(--met-bg); }
+  .open { color: var(--open); background: var(--open-bg); }
+  .no { color: var(--no); background: var(--no-bg); }
+  .lvl { font-weight: 700; font-size: 16px; }
+  .lvl small { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .links a { display: block; font-size: 13px; white-space: nowrap; }
+  .thumb img { width: 120px; border-radius: 6px; border: 1px solid var(--line); display: block; background: #fff; }
+  .novid { color: var(--muted); font-size: 13px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; color: var(--ink2); font-size: 13.5px; margin: 8px 0 0; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 16px; }
+  figure { margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  figure img { width: 100%; display: block; }
+  figcaption { color: #52514e; font-size: 13px; padding: 6px 4px 0; }
+  .runs td, .runs th { white-space: nowrap; }
+  .note { color: var(--ink2); font-size: 13.5px; margin: 10px 2px 0; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ChemShield · Final Prototype Review</h1>
+    <p>AI-protected pH safety station · evidence recorded on the physical prototype, 15 Nov 2026</p>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Constraints, specifications and integrated specifications</h2>
+  <div class="card scroll">
+    <table>
+      <thead><tr><th>Item</th><th>Requirement</th><th>Result</th><th>Status</th><th>Evidence level</th><th>Plot</th><th>Data</th><th>Video</th></tr></thead>
+      <tbody id="specs"></tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <span><b>9</b> physical prototype, live at the booth</span>
+    <span><b>8</b> video of the prototype + data</span>
+    <span><b>7</b> picture + data</span>
+    <span><b>6</b> simulation + data</span>
+  </div>
+
+  <h2>The five recorded recovery runs</h2>
+  <div class="card scroll">
+    <table class="runs">
+      <thead><tr><th>Run</th><th>Spill (0.5 M HCl)</th><th>pH low</th><th>Recovery mode</th><th>Pumps locked</th><th>HMI shown</th><th>Back in band</th><th>Finished</th><th>Reagent</th><th>Doses</th><th>Peak pH</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>6 mL</td><td>5.76</td><td>0.8 ms</td><td>4.9 ms</td><td>342 ms</td><td>13 s</td><td>13 s</td><td>2.42 mmol</td><td>1</td><td>6.81</td></tr>
+        <tr><td>2</td><td>6 mL</td><td>5.35</td><td>0.6 ms</td><td>5.7 ms</td><td>448 ms</td><td>20 s</td><td>20 s</td><td>3.14 mmol</td><td>1</td><td>6.79</td></tr>
+        <tr><td>3</td><td>12 mL</td><td>3.69</td><td>0.4 ms</td><td>4.5 ms</td><td>496 ms</td><td>42 s</td><td>141 s</td><td>10.08 mmol</td><td>4</td><td>9.49</td></tr>
+        <tr><td>4</td><td>6 mL</td><td>4.57</td><td>0.6 ms</td><td>7.6 ms</td><td>340 ms</td><td>31 s</td><td>31 s</td><td>4.89 mmol</td><td>2</td><td>7.31</td></tr>
+        <tr><td>5</td><td>8 mL</td><td>5.84</td><td>0.7 ms</td><td>6.8 ms</td><td>—</td><td>7 s</td><td>34 s</td><td>3.86 mmol</td><td>2</td><td>6.89</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Limits: recovery mode ≤ 2 s (INT-S1) · back in 6.0–8.5 ≤ 300 s (INT-S2, S6) · reagent ≤ 50 mmol (C3) · peak ≤ 9.5 (INT-S3). Every run passed every limit.
+    <a href="02_recovery_runs/recovery_runs.csv">recovery_runs.csv</a> · <a href="02_recovery_runs/run_notes.md">operator notes</a></p>
+
+  <h2>Plots</h2>
+  <div class="gallery" id="gallery"></div>
+
+  <footer>Source data and the scripts that made every plot are in this folder (<a href="make_plots.py">make_plots.py</a>). Audit logs are hash-chained by the gateway: <a href="06_audit_logs/">06_audit_logs</a>.</footer>
+</div>
+
+<script>
+// ---- Video links: paste each link between the quotes, then reload the page. ----
+const VIDEOS = {
+  "C1": "", "C2": "", "C3": "", "S1": "", "S2": "", "S3": "", "S4": "",
+  "S5": "", "S6": "", "S7": "", "S9": "", "INT-S1": "", "INT-S2": "", "INT-S3": ""
+};
+
+const P = "plots/";
+const SPECS = [
+  { id: "C1", req: "Only approved dilute acid/base, each ≤ 5 wt%",
+    res: "4 approved bottles; strongest is 0.5 M NaOH at <b>1.96 wt%</b>. The gateway only accepts these 4 channels.",
+    st: "met", lvl: 9, plot: "C1_reagent_strength.png", data: [["Scorecard", "01_scorecard/spec_scorecard.csv"]] },
+  { id: "C2", req: "The gateway is the only path to the pumps",
+    res: "Intrusion check <b>8/8 PASS</b> (only ports 22 and 8000 open, firewall drops the rest, IP forwarding off). <b>180/180</b> forged, unsigned and tampered commands blocked; <b>0</b> reached a pump.",
+    st: "met", lvl: 9, plot: "S3_C2_attacks_blocked.png",
+    data: [["C2 check", "04_C2_S3_attacks/chemshield_lab_c2_check/ICS-AT-01_c2_check.txt"], ["Attack demo", "04_C2_S3_attacks/hotspot_session/attack_demo_5types.txt"], ["Audit logs", "06_audit_logs/"]] },
+  { id: "C3", req: "≤ 50 mmol reagent per recovery",
+    res: "5/5 runs within the limit; most used <b>10.1 mmol</b> (the 12 mL spill), others 2.4–4.9 mmol.",
+    st: "met", lvl: 9, plot: "C3_reagent_per_recovery.png", data: [["Recovery runs", "02_recovery_runs/recovery_runs.csv"]] },
+  { id: "S1", req: "pH held in 6.5–7.5 for 10 minutes",
+    res: "600 readings over 10 min, <b>pH 6.85–7.14</b>, 0 outside the band, no doses needed.",
+    st: "met", lvl: 9, plot: "S1_ph_hold_10min.png", data: [["pH log", "03_S1_hold/hold_PASS/s1_hold.csv"]] },
+  { id: "S2", req: "≤ 20 mL per dose, ≥ 15 s mixing between doses",
+    res: "<b>3/3</b> requests over 20 mL rejected. Shortest gap between doses <b>15 s</b>; every early request held back by the mixing wait.",
+    st: "met", lvl: 9, plot: "S2_dose_cap.png", plot2: "S2_mixing_time.png", data: [["Scorecard", "01_scorecard/spec_scorecard.csv"], ["Audit logs", "06_audit_logs/"]] },
+  { id: "S3", req: "≥ 99 % of replayed or stale commands rejected",
+    res: "<b>4,140 / 4,140 rejected (100 %)</b>: replays and 5-s-old commands, 1,000 of each, twice. 0 forwarded to the pumps.",
+    st: "met", lvl: 9, plot: "S3_C2_attacks_blocked.png",
+    data: [["1,000 replays", "04_C2_S3_attacks/hotspot_session/replay_1000.txt"], ["1,000 stale", "04_C2_S3_attacks/hotspot_session/stale_1000.txt"], ["Audit logs", "06_audit_logs/"]] },
+  { id: "S4", req: "Every dose gets a class and risk score within 3 s",
+    res: "AI Dose Guard on the Pi: <b>1,000/1,000 classified, slowest 1.6 ms</b>. Live: 57 doses, slowest 2.3 ms. Stealth attack (stolen key, passes every rule check): <b>3/3 blocked</b>.",
+    st: "met", lvl: 9, plot: "S4_ai_dose_guard_timing.png",
+    data: [["1,000 timings", "05_S4_ai_timing/pi_1000_requests/ICS-AT-03_latency.csv"], ["Stealth attack", "04_C2_S3_attacks/hotspot_session/stealth_attack_test.txt"]] },
+  { id: "S5", req: "Usability: SUS score ≥ 80",
+    res: "SUS questionnaires from users of the HMI.", st: "open", lvl: "7–8", plot: null, data: [] },
+  { id: "S6", req: "≥ 95 % of recoveries finished within 300 s",
+    res: "<b>5/5 (100 %)</b>; slowest 141 s.", st: "met", lvl: 9, plot: "INT-S2_S6_recovery_times.png",
+    data: [["Recovery runs", "02_recovery_runs/recovery_runs.csv"]] },
+  { id: "S7", req: "Pump rated maximum ≤ 500 mL/min",
+    res: "Kamoer KPHM400, <b>400 mL/min</b> rated (label + datasheet).", st: "met", lvl: 9, plot: null, data: [] },
+  { id: "S9", req: "≥ 15 % less reagent than a PI controller",
+    res: "Same 600 simulated spills: reagent about equal (it is set by the chemistry). ChemShield recovers <b>600/600 vs 417/600</b>, in <b>97 s vs 231 s</b>, with <b>3.8 vs 9.8 doses</b>.",
+    st: "no", stText: "Not met (reagent)", lvl: 6, plot: "S9_solver_vs_PI.png",
+    data: [["Summary", "07_S9_simulation/README.md"], ["Per spill", "07_S9_simulation/s9_per_event.csv"]] },
+  { id: "INT-S1", req: "Safe-recovery mode within 2 s of the event",
+    res: "<b>5/5</b>: recovery mode in 0.4–0.8 ms, pumps locked in 4.5–7.6 ms, shown on the HMI in 0.34–0.50 s.",
+    st: "met", lvl: 9, plot: "INT-S1_recovery_mode_timing.png", data: [["Recovery runs", "02_recovery_runs/recovery_runs.csv"]] },
+  { id: "INT-S2", req: "pH back in 6.0–8.5 within 5 minutes",
+    res: "<b>5/5</b>; back in band after 7–42 s.", st: "met", lvl: 9, plot: "INT-S2_S6_recovery_times.png",
+    data: [["Recovery runs", "02_recovery_runs/recovery_runs.csv"]] },
+  { id: "INT-S3", req: "≥ 90 % of runs never pass 5.5 / 9.5 on the far side",
+    res: "<b>5/5</b>; highest pH while correcting an acid spill 9.49 (the 12 mL spill), others 6.8–7.3.",
+    st: "met", lvl: 9, plot: "INT-S3_ph_extremes.png", data: [["Recovery runs", "02_recovery_runs/recovery_runs.csv"]] },
+];
+
+const LVL = { 9: "live at the booth", 8: "video + data", 7: "picture + data", 6: "simulation + data", "7–8": "picture/video + data" };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const tb = document.getElementById("specs");
+for (const s of SPECS) {
+  const st = s.st === "met" ? '<span class="pill met">✓ Met</span>'
+           : s.st === "open" ? '<span class="pill open">◷ Open</span>'
+           : `<span class="pill no">✕ ${esc(s.stText || "Not met")}</span>`;
+  const plot = s.plot ? `<a class="thumb" href="#p-${esc(s.plot)}"><img src="${P + s.plot}" alt="${esc(s.id)} plot" loading="lazy"></a>` : '<span class="novid">—</span>';
+  const data = s.data.length ? s.data.map(([t, h]) => `<a href="${h}">${esc(t)}</a>`).join("") : '<span class="novid">—</span>';
+  const v = VIDEOS[s.id];
+  const vid = v ? `<a href="${esc(v)}" target="_blank" rel="noopener">▶ Watch</a>` : '<span class="novid">add link</span>';
+  tb.insertAdjacentHTML("beforeend",
+    `<tr><td class="item">${esc(s.id)}</td><td class="req">${esc(s.req)}</td><td class="res">${s.res}</td><td>${st}</td>
+     <td class="lvl">${s.lvl}<small>${LVL[s.lvl] || ""}</small></td><td>${plot}</td><td class="links">${data}</td><td>${vid}</td></tr>`);
+}
+
+const met = SPECS.filter((s) => s.st === "met").length;
+const tiles = [
+  [`${met} / ${SPECS.length}`, "items met"],
+  ["5 / 5", "real spills recovered, all limits"],
+  ["0", "attack commands reached a pump (of 4,323)"],
+  ["1.6 ms", "slowest AI Dose Guard decision (limit 3 s)"],
+];
+document.getElementById("tiles").innerHTML = tiles.map(([b, t]) => `<div class="tile"><b>${b}</b><span>${t}</span></div>`).join("");
+
+const shown = new Set();
+const gal = document.getElementById("gallery");
+for (const s of SPECS) for (const p of [s.plot, s.plot2]) {
+  if (!p || shown.has(p)) continue;
+  shown.add(p);
+  const who = SPECS.filter((x) => x.plot === p || x.plot2 === p).map((x) => x.id).join(", ");
+  gal.insertAdjacentHTML("beforeend", `<figure id="p-${esc(p)}"><a href="${P + p}" target="_blank"><img src="${P + p}" alt="${esc(who)}" loading="lazy"></a><figcaption>${esc(who)} · <a href="${P + p}" target="_blank">open full size</a></figcaption></figure>`);
+}
+</script>
+</body>
+</html>
