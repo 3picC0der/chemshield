@@ -9,8 +9,9 @@ Method: `s9_compare.py` runs the recovery solver (rdo) and the PI controller fro
 | Mean time | 231 s | **97 s** |
 | Doses per event | 9.8 | **3.75** |
 | Overshoot past 5.5 / 9.5 | 0 % | 0 % |
-| Reagent, events both recovered (417) | 28.9 mmol | 29.8 mmol (**3 % more**) |
+| Reagent, events both recovered (417) | 28.9 mmol | 29.8 mmol (3 % more) |
+| **Reagent per successful recovery** (all reagent ÷ spills fixed) | 40.5 mmol | **29.6 mmol (27 % less)** |
 
-**Result: S9 as written is not met.** Reagent is set by the chemistry. Cancelling X mmol of spilled acid takes about X mmol of base, whichever controller doses it. The PI uses about 3 % less only because it stops at the edge of the band (about 97 % of the spill neutralised), while the solver brings the tank back to about pH 7 (about 100 %). Neither can be 15 % below what the spill needs.
+**Result:** per successful recovery, ChemShield uses **27 % less reagent** than the PI (S9 met in simulation, level 6). The PI spends about 26 mmol on each of the 183 spills it never fixes. On the same spills, when both succeed, reagent is about equal, because it is set by the chemistry. Cancelling X mmol of spilled acid takes about X mmol of base, whichever controller doses it. The PI uses about 3 % less only because it stops at the edge of the band (about 97 % of the spill neutralised), while the solver brings the tank back to about pH 7 (about 100 %). So on a spill both fix, neither can be 15 % below what that spill needs. The saving comes from not wasting reagent on failed recoveries.
 **What the solver does better:** it recovers every spill (vs 69.5 %), 2.4× faster, with 2.6× fewer doses, at the same reagent use.
 Files: `s9_summary.json`, `s9_per_event.csv`.

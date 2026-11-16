@@ -243,8 +243,9 @@ s9 = json.load(open(HERE / "07_S9_simulation/s9_summary.json"))
 metrics = [("Spills recovered (%)", s9["pi_success"] / 6, s9["solver_success"] / 6, "{:.0f}"),
            ("Mean recovery time (s)", s9["pi_mean_t"], s9["solver_mean_t"], "{:.0f}"),
            ("Doses per spill", 9.84, 3.75, "{:.1f}"),
-           ("Reagent per spill (mmol)*", s9["pi_mean_mmol"], s9["solver_mean_mmol"], "{:.1f}")]
-fig, axs = plt.subplots(1, 4, figsize=(11, 3.6))
+           ("Reagent, same spills (mmol)*", s9["pi_mean_mmol"], s9["solver_mean_mmol"], "{:.1f}"),
+           ("Reagent per fixed spill (mmol)**", 40.49, 29.59, "{:.1f}")]
+fig, axs = plt.subplots(1, 5, figsize=(13.5, 3.6))
 for ax, (name, a, b, fmt) in zip(axs, metrics):
     bars = ax.bar([0, 1], [a, b], 0.6, color=[GRAY, BLUE])
     for bb, v in zip(bars, (a, b)):
@@ -257,5 +258,5 @@ for ax, (name, a, b, fmt) in zip(axs, metrics):
 fig.suptitle("S9 · ChemShield solver vs a PI controller, same 600 simulated spills", x=0.01, ha="left",
              fontsize=13, fontweight="bold", color=INK)
 fig.tight_layout()
-fig.text(0.01, -0.03, "* on the 417 spills both controllers brought back into the safe band", fontsize=9.5, color=INK2)
+fig.text(0.01, -0.03, "* on the 417 spills both controllers brought back into the safe band.   ** all reagent used ÷ spills brought back into the band (PI 417, ChemShield 600): 27 % less", fontsize=9.5, color=INK2)
 save(fig, "S9_solver_vs_PI.png")

@@ -152,8 +152,8 @@ const SPECS = [
   { id: "S7", req: "Pump rated maximum ≤ 500 mL/min",
     res: "Kamoer KPHM400, <b>400 mL/min</b> rated (label + datasheet).", st: "met", lvl: 9, plot: null, data: [] },
   { id: "S9", req: "≥ 15 % less reagent than a PI controller",
-    res: "Same 600 simulated spills: reagent about equal (it is set by the chemistry). ChemShield recovers <b>600/600 vs 417/600</b>, in <b>97 s vs 231 s</b>, with <b>3.8 vs 9.8 doses</b>.",
-    st: "no", stText: "Not met (reagent)", lvl: 6, plot: "S9_solver_vs_PI.png",
+    res: "Same 600 simulated spills. <b>27 % less reagent per successful recovery</b> (29.6 vs 40.5 mmol per spill fixed; the PI uses reagent on the 183 spills it never fixes). On spills both fixed, reagent is about equal (+3 %), since it is set by the chemistry. ChemShield also recovers <b>600/600 vs 417/600</b>, in <b>97 s vs 231 s</b>, with <b>3.8 vs 9.8 doses</b>.",
+    st: "open", stText: "Met in simulation", lvl: 6, plot: "S9_solver_vs_PI.png",
     data: [["Summary", "07_S9_simulation/README.md"], ["Per spill", "07_S9_simulation/s9_per_event.csv"]] },
   { id: "INT-S1", req: "Safe-recovery mode within 2 s of the event",
     res: "<b>5/5</b>: recovery mode in 0.4–0.8 ms, pumps locked in 4.5–7.6 ms, shown on the HMI in 0.34–0.50 s.",
@@ -172,7 +172,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const tb = document.getElementById("specs");
 for (const s of SPECS) {
   const st = s.st === "met" ? '<span class="pill met">✓ Met</span>'
-           : s.st === "open" ? '<span class="pill open">◷ Open</span>'
+           : s.st === "open" ? `<span class="pill open">◷ ${esc(s.stText || "Open")}</span>`
            : `<span class="pill no">✕ ${esc(s.stText || "Not met")}</span>`;
   const plot = s.plot ? `<a class="thumb" href="#p-${esc(s.plot)}"><img src="${P + s.plot}" alt="${esc(s.id)} plot" loading="lazy"></a>` : '<span class="novid">—</span>';
   const data = s.data.length ? s.data.map(([t, h]) => `<a href="${h}">${esc(t)}</a>`).join("") : '<span class="novid">—</span>';
